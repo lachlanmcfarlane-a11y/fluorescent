@@ -824,10 +824,7 @@
             // 1. Calculate the longest word in the current bank
             let maxWordLength = bestValidWordsArr.reduce((max, word) => Math.max(max, word.length), 0);
             
-            // 2. Retrieve their current SYS LOGS (history)
-            let currentSysLogs = localStorage.getItem('carver_history') || '{}';
-            
-            // 3. Fire-and-forget the payload to your Worker API
+            // 2. Fire-and-forget the payload to your Worker API
             fetch('https://fluorescent-api.lachlan-mcfarlane.workers.dev/api/log', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
