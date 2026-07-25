@@ -323,6 +323,14 @@
 
         const MAX_EDITS = 10;
         const MAX_COMBOS = 5;
+
+// Generate or retrieve a persistent anonymous ID for the user
+let userId = localStorage.getItem('fluorescent_user_id');
+if (!userId) {
+    userId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+    localStorage.setItem('fluorescent_user_id', userId);
+}
+        
         let dictionary = new Set();
         let isDictLoaded = false;
         
@@ -812,7 +820,38 @@
                 isGameLocked = true;
                 alert("ALL 5 SECTORS COMPLETE. EXPORT YOUR LOG.");
             }
+function saveCombo() {
+            if (!canSubmit || isGameLocked) return;
+            if (editsMade === 0 && hiddenLetterIndex === -1) return;
+            
+            let comboStr = bestValidWordsArr.join(' + ');
+            let editsLeft = MAX_EDITS - editsMade;
+            let multiplier = 1 + (editsLeft / MAX_EDITS);
+            let finalScore = Math.floor(moveBaseScore * multiplier);
+            
+            // --- NEW: TELEMETRY TRANSMISSION ---
+            // 1. Calculate the longest word in the current bank
+            let maxWordLength = bestValidWordsArr.reduce((max, word) => Math.max(max, word.length), 0);
+            
+            // 2. Retrieve their current SYS LOGS (history)
+            let currentSysLogs = localStorage.getItem('carver_history') || '{}';
+            
+            // 3. Fire-and-forget the payload to your Worker API
+            // (Make sure to replace YOUR_USERNAME with your actual workers.dev subdomain)
+            fetch('https://fluorescent-api.YOUR_USERNAME.workers.dev/api/log', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: userId,
+                    sector: daysPassed,
+                    score: finalScore,
+                    maxWordLength: maxWordLength,
+                    syslogs: currentSysLogs
+                })
+            }).catch(e => console.log("Telemetry transmission failed"));
+            // ------------------------------------
 
+            globalScore += finalScore;
             updateStats();
             renderMainWord();
             updateHistoryUI();
