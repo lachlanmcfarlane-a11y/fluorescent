@@ -69,6 +69,20 @@
             margin: -10px auto 15px auto;
             text-transform: uppercase;
         }
+
+        /* Target the emoji specifically for the rotation animation */
+        .landscape-hint span {
+            display: inline-block;
+            animation: gentleRotate 3s infinite ease-in-out;
+        }
+        
+        @keyframes gentleRotate {
+            0% { transform: rotate(0deg); }
+            25% { transform: rotate(90deg); }
+            50% { transform: rotate(90deg); }
+            75% { transform: rotate(0deg); }
+            100% { transform: rotate(0deg); }
+        }
         
         /* Automatically display only on mobile/portrait screens */
         @media screen and (orientation: portrait) {
@@ -258,7 +272,7 @@
     <!-- The main word container -->
     <div class="word-container" id="main-word"></div>
     <div id="landscape-hint" class="landscape-hint">
-        📱 Rotate device for optimal VFD segment splicing 
+        <span>📱</span> Rotate device for optimal spacing
     </div>
     <div class="stats-box">
         <div class="parsed-text" id="parsed-reading">-</div>
