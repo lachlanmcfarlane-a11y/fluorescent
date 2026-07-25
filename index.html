@@ -872,17 +872,23 @@
             // 1. Calculate the longest word in the current bank
             let maxWordLength = bestValidWordsArr.reduce((max, word) => Math.max(max, word.length), 0);
             
-            // 2. Fire-and-forget the payload to your Worker API
+            // Map out the individual words and their individual scores for this submission
+            let sectorWordsDetails = bestValidWordsArr.map(w => ({
+                word: w,
+                score: finalScore 
+            }));
+
+            // Send payload to your Worker API with words_played at the root level
             fetch('https://fluorescent-api.lachlan-mcfarlane.workers.dev/api/log', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                // Remove the currentSysLogs variable entirely and update your fetch body:
                 body: JSON.stringify({
                     userId: userId,
                     sector: daysPassed,
                     score: finalScore,
                     maxWordLength: maxWordLength,
-                    syslogs: gameHistory // <-- Pass the object directly
+                    wordsPlayed: sectorWordsDetails, // <-- Dedicated top-level array
+                    syslogs: gameHistory 
                 })
             }).catch(e => console.log("Telemetry transmission failed"));
             // ------------------------------------
