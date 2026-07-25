@@ -831,12 +831,13 @@
             fetch('https://fluorescent-api.lachlan-mcfarlane.workers.dev/api/log', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                // Remove the currentSysLogs variable entirely and update your fetch body:
                 body: JSON.stringify({
                     userId: userId,
                     sector: daysPassed,
                     score: finalScore,
                     maxWordLength: maxWordLength,
-                    syslogs: currentSysLogs
+                    syslogs: gameHistory // <-- Pass the object directly
                 })
             }).catch(e => console.log("Telemetry transmission failed"));
             // ------------------------------------
