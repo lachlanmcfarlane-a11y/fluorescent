@@ -323,13 +323,6 @@
 
         const MAX_EDITS = 10;
         const MAX_COMBOS = 5;
-
-// Generate or retrieve a persistent anonymous ID for the user
-let userId = localStorage.getItem('fluorescent_user_id');
-if (!userId) {
-    userId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
-    localStorage.setItem('fluorescent_user_id', userId);
-}
         
         let dictionary = new Set();
         let isDictLoaded = false;
@@ -348,6 +341,13 @@ if (!userId) {
         let bestValidWordsArr = [];
         let canSubmit = false;
         let isGameLocked = false;
+
+        
+        let userId = localStorage.getItem('fluorescent_user_id');
+        if (!userId) {
+            userId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+            localStorage.setItem('fluorescent_user_id', userId);
+        }
 
         async function loadDictionary() {
             try {
