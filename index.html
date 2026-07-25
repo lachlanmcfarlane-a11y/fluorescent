@@ -4,7 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>FLUORESCENT</title>
-  
+      <!-- Landscape Reminder Overlay -->
+    <div id="orientation-warning" class="orientation-overlay">
+        <div class="orientation-content">
+            <div class="rotate-icon">📱 ⟳</div>
+            <h2>ROTATE YOUR DEVICE</h2>
+            <p>Please switch to landscape mode for the best carving experience.</p>
+        </div>
+    </div>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 
@@ -60,7 +67,63 @@
             border: 1px solid #0a1f10;
             max-width: 100%; 
         }
+        /* Hidden by default (Landscape or Desktop) */
+        .orientation-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: var(--bg, #020804);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
         
+        .orientation-content {
+            background: var(--panel, #051409);
+            border: 1px solid var(--accent, #55ffcc);
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 320px;
+            box-shadow: 0 0 20px rgba(85, 255, 204, 0.2);
+        }
+        
+        .orientation-content h2 {
+            color: var(--accent, #55ffcc);
+            font-family: inherit;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+        
+        .orientation-content p {
+            color: #a1a1aa;
+            font-size: 0.9rem;
+            margin: 0;
+        }
+        
+        .rotate-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            animation: rotatePulse 2s infinite ease-in-out;
+        }
+        
+        @keyframes rotatePulse {
+            0% { transform: rotate(0deg); }
+            50% { transform: rotate(90deg); }
+            100% { transform: rotate(0deg); }
+        }
+        
+        /* Trigger automatically via CSS when orientation is portrait */
+        @media screen and (orientation: portrait) {
+            #orientation-warning {
+                display: flex;
+            }
+        }
         .letter-wrapper {
             display: flex;
             flex-direction: column;
