@@ -828,8 +828,7 @@
             let currentSysLogs = localStorage.getItem('carver_history') || '{}';
             
             // 3. Fire-and-forget the payload to your Worker API
-            // (Make sure to replace YOUR_USERNAME with your actual workers.dev subdomain)
-            fetch('https://fluorescent-api.YOUR_USERNAME.workers.dev/api/log', {
+            fetch('https://fluorescent-api.lachlan-mcfarlane.workers.dev/api/log', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
