@@ -871,8 +871,6 @@
         
             // 1. Calculate the longest word in the current bank
             let maxWordLength = bestValidWordsArr.reduce((max, word) => Math.max(max, word.length), 0);
-            
-           
 
             // Send payload to your Worker API with words_played at the root level
             fetch('https://fluorescent-api.lachlan-mcfarlane.workers.dev/api/log', {
