@@ -842,8 +842,23 @@
             localStorage.setItem('carver_board_state', JSON.stringify(currentState));
             localStorage.setItem('carver_hidden_index', hiddenLetterIndex);
             
+            // Build an array of the words and their individual scores for this combo submission
+            let sectorWordsDetails = bestValidWordsArr.map(w => ({
+                word: w,
+                score: finalScore // or calculate individual word score if you prefer
+            }));
+
             let gameHistory = JSON.parse(localStorage.getItem('carver_history')) || {};
-            gameHistory[daysPassed] = { score: globalScore, words: usedWordsThisSession, baseWord: dailyWord };
+            
+            // If the sector already has entries, append to them; otherwise initialize
+            let existingEntries = gameHistory[daysPassed]?.wordsPlayed || [];
+            
+            gameHistory[daysPassed] = { 
+                score: globalScore, 
+                words: usedWordsThisSession, 
+                baseWord: dailyWord,
+                wordsPlayed: existingEntries.concat(sectorWordsDetails) // <-- Stores individual words & scores
+            };
             localStorage.setItem('carver_history', JSON.stringify(gameHistory));
             
             document.getElementById('global-score').innerText = globalScore;
