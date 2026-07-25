@@ -820,16 +820,7 @@
                 isGameLocked = true;
                 alert("ALL 5 SECTORS COMPLETE. EXPORT YOUR LOG.");
             }
-function saveCombo() {
-            if (!canSubmit || isGameLocked) return;
-            if (editsMade === 0 && hiddenLetterIndex === -1) return;
-            
-            let comboStr = bestValidWordsArr.join(' + ');
-            let editsLeft = MAX_EDITS - editsMade;
-            let multiplier = 1 + (editsLeft / MAX_EDITS);
-            let finalScore = Math.floor(moveBaseScore * multiplier);
-            
-            // --- NEW: TELEMETRY TRANSMISSION ---
+        
             // 1. Calculate the longest word in the current bank
             let maxWordLength = bestValidWordsArr.reduce((max, word) => Math.max(max, word.length), 0);
             
@@ -837,7 +828,8 @@ function saveCombo() {
             let currentSysLogs = localStorage.getItem('carver_history') || '{}';
             
             // 3. Fire-and-forget the payload to your Worker API
-            fetch('https://fluorescent-api.lachlan-mcfarlane.workers.dev/api/log', {
+            // (Make sure to replace YOUR_USERNAME with your actual workers.dev subdomain)
+            fetch('https://fluorescent-api.YOUR_USERNAME.workers.dev/api/log', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
