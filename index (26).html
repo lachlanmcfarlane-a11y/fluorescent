@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FLUORESCENT</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+        :root { 
+            --bg: #020804; 
+            --panel: #051409; 
+            --text: #d4d4d8; 
+            /* Cyan/Teal Fluorescent color matching old-school VFDs */
+            --accent: #55ffcc; 
+            --accent-glow: rgba(85, 255, 204, 0.4);
+            --danger: #ff3366; 
+            --danger-glow: rgba(255, 51, 102, 0.4);
+            --off-seg: #0a1f10;
+        }
+        
+        body { 
+            font-family: 'Share Tech Mono', monospace; 
+            background-color: var(--bg); 
+            color: var(--text); 
+            margin: 0; 
+            padding: 10px; 
+            text-align: center; 
+            touch-action: manipulation;
+        }
+
+        p { color: #71717a; margin-top: 0; font-size: 0.9rem; }
+        
+        .header-panel { 
+            background: var(--panel); 
+            border: 1px solid #143d20; 
+            border-radius: 8px; 
+            padding: 10px; 
+            max-width: 600px; 
+            margin: 10px auto; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            font-size: 0.85rem; 
+            box-shadow: 0 4px 10px rgba(0,255,65,0.05); 
+        }
+        .header-panel div { display: flex; flex-direction: column; width: 33%; }
+        .header-panel span { font-weight: bold; color: var(--accent); font-size: 1.4rem; margin-top: 2px;}
+        .header-panel span.danger { color: var(--danger); }
+        
+        .word-container { 
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+            margin: 20px auto; 
+            background: #000; 
+            padding: 15px 5px; 
+            border-radius: 8px; 
+            border: 1px solid #0a1f10;
+            max-width: 100%; 
+        }
+        
+        .letter-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 2px;
+        }
+
+        /* Dimming effect for invalid letters */
+        .letter-dimmed line {
+            opacity: 0.7; 
+        }
+
+        .letter { 
+            width: clamp(40px, 10vw, 65px); 
+            height: clamp(55px, 14vw, 90px); 
+            display: inline-block; 
+            transform: skewX(-10deg); 
+            overflow: visible; /* Prevents dot clipping */
+        }
+        
+        .interactive line { 
+            cursor: pointer; 
+            transition: all 0.1s ease; 
+            stroke-width: 16; 
+            stroke-linecap: round;
+        }
+        .seg-on { stroke: var(--accent); filter: drop-shadow(0 0 4px var(--accent-glow)); }
+        .seg-off { stroke: var(--off-seg); }
+        .seg-invalid { stroke: var(--danger); filter: drop-shadow(0 0 4px var(--danger-glow)); }
+
+        .dot-voided { fill: var(--danger); filter: drop-shadow(0 0 4px var(--danger-glow)); }
+        .dot-active { fill: var(--off-seg); stroke: var(--accent); stroke-width: 2px; }
+
+        .stats-box { margin: 15px auto; color: #a1a1aa; font-size: 1rem; max-width: 600px; }
+        .parsed-text { 
+            font-size: 1.5rem; 
+            letter-spacing: 3px; 
+            color: #fff; 
+            margin: 10px 0; 
+            background: var(--panel); 
+            padding: 10px; 
+            border-radius: 6px; 
+            min-height: 25px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            border: 1px dashed #143d20;
+        }
+        .parsed-text span.invalid { color: var(--danger); }
+        
+        .controls { margin: 15px 0; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+        button { 
+            padding: 12px 20px; 
+            border-radius: 6px; 
+            border: none; 
+            font-size: 1rem; 
+            font-family: inherit;
+            font-weight: bold; 
+            cursor: pointer; 
+            text-transform: uppercase; 
+            letter-spacing: 1px;
+            width: 100%;
+            max-width: 250px;
+        }
+        .btn-primary { background: var(--accent); color: #000; box-shadow: 0 0 10px var(--accent-glow); }
+        .btn-primary:active { transform: scale(0.98); }
+        .btn-primary:disabled { background: #143d20; color: #52525b; cursor: not-allowed; box-shadow: none; }
+        
+        .btn-secondary { background: transparent; color: #a1a1aa; border: 1px solid #143d20; }
+        .btn-secondary:active { background: #0a1f10; }
+        
+        .btn-share { background: #143d20; color: var(--accent); border: 1px solid var(--accent); }
+        .btn-dev { background: #051409; color: #143d20; font-size: 0.7rem; padding: 8px; border: 1px dashed #143d20; }
+
+        .banner { background-color: var(--accent); color: #000; padding: 8px; font-weight: bold; border-radius: 4px; margin-bottom: 10px; display: inline-block; font-size: 0.9rem;}
+
+        .gallery { max-width: 600px; margin: 30px auto; text-align: left; }
+        .gallery-item { background: var(--panel); padding: 12px; margin: 10px 0; border-radius: 6px; border-left: 4px solid var(--accent); display: flex; align-items: center; justify-content: space-between; }
+        .gallery-svgs { display: flex; flex-wrap: wrap;}
+        .gallery-svgs .letter-wrapper { margin: 1px; }
+        .gallery-svgs .letter { width: 25px; height: 35px; stroke-width: 12;}
+        .gallery-info { text-align: right; min-width: 100px; }
+        .gallery-info h3 { margin: 0 0 2px 0; color: #fff; font-size: 1.1rem; }
+        .gallery-info p { margin: 0; font-size: 0.8rem; color: #a1a1aa; }
+        
+        @media (min-width: 600px) {
+            button { width: auto; }
+        }
+        
+        .dev-controls { margin-top: 40px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+    
+        .top-bar { 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            position: relative; 
+            margin-top: 10px; 
+            height: 60px; 
+            z-index: 100;
+        }
+    
+        .title-container { display: flex; justify-content: center; align-items: center; }
+        .title-letter { 
+            width: clamp(14px, 3.5vw, 24px); 
+            height: clamp(20px, 5vw, 34px); 
+            transform: skewX(-10deg); 
+            overflow: visible; 
+        }
+        .title-letter line { stroke-width: 14; stroke-linecap: round; transition: all 0.2s ease; }
+        
+        
+        .help-container { 
+            position: absolute; 
+            right: 10px; 
+            top: 50%; 
+            transform: translateY(-50%); 
+            z-index: 101;
+        }
+        .help-btn-icon { 
+            background: transparent; color: var(--accent); border: 1px dashed var(--accent);
+            border-radius: 50%; width: 35px; height: 35px; font-weight: bold; font-size: 1.2rem;
+            cursor: pointer; display: flex; justify-content: center; align-items: center;
+            font-family: inherit;
+        }
+        .help-btn-icon:hover { background: #0a1f10; }
+        .help-modal {
+            display: none; position: absolute; top: 45px; right: 0; width: 300px; max-height: 70vh;
+            overflow-y: auto; background: var(--bg); border: 1px solid var(--accent);
+            border-radius: 8px; padding: 15px; z-index: 100; box-shadow: 0 0 20px rgba(85,255,204,0.2);
+            text-align: center; font-size: 0.85rem;
+        }
+        .help-container:hover .help-modal { display: block; }
+        .history-container:hover .help-modal { display: block; }
+        
+        @media (min-width: 600px) {
+            .help-modal { width: 450px; }
+        }
+        
+        .help-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 10px;}
+        .help-card { border: 1px solid #143d20; background: var(--panel); border-radius: 6px; padding: 8px; display: flex; flex-direction: column; align-items: center; }
+        .help-card-title { color: #fff; font-weight: bold; margin-bottom: 5px; font-size: 1.1rem;}
+        .help-card-svgs { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;}
+</style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <div class="history-container" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); z-index: 101;">
+            <button class="help-btn-icon" onclick="document.getElementById('history-modal').style.display = document.getElementById('history-modal').style.display === 'block' ? 'none' : 'block'">📊</button>
+            <div id="history-modal" class="help-modal" style="left: 0; right: auto; text-align: left;">
+                <div style="color:var(--accent); font-size:1.2rem; font-weight:bold; letter-spacing: 2px; text-align: center;">SYS LOGS</div>
+                <div id="history-stats" style="margin: 15px 0; border-bottom: 1px dashed #143d20; padding-bottom: 10px;"></div>
+                <div id="history-list" style="max-height: 300px; overflow-y: auto; font-size: 0.85rem; padding-right: 5px;"></div>
+            </div>
+        </div>
+        
+        <div id="animated-title" class="title-container"></div>
+
+        <div class="help-container">
+            <button class="help-btn-icon" onclick="document.getElementById('help-modal').style.display = document.getElementById('help-modal').style.display === 'block' ? 'none' : 'block'">?</button>
+            <div id="help-modal" class="help-modal">
+                <div style="color:var(--accent); font-size:1.2rem; font-weight:bold; letter-spacing: 2px;">SEGMENT REGISTRY</div>
+                <p style="margin-top:5px; margin-bottom: 10px;">Valid configurations for the parser.</p>
+                <div id="help-grid" class="help-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <p id="date-display">Loading...</p>
+    
+    <div id="banner" class="banner">SYS: LOADING DICTIONARY...</div>
+
+    <div class="header-panel">
+        <div>COMBOS <span id="combos-count">0/5</span></div>
+        <div>SEGMENT SPLICES <span id="edits-left">10</span></div>
+        <div>SCORE <span id="global-score">0</span></div>
+    </div>
+
+    <!-- The main word container -->
+    <div class="word-container" id="main-word"></div>
+
+    <div class="stats-box">
+        <div class="parsed-text" id="parsed-reading">-</div>
+        Target: <strong id="current-valid-word" style="color: #fff;">None</strong><br>
+        Yield: <strong id="proj-score" style="color: var(--accent);">0</strong>
+    </div>
+
+    <div class="controls">
+        <button class="btn-primary" id="submit-btn" onclick="saveCombo()" disabled>Execute Bank</button>
+        <button class="btn-secondary" onclick="resetBoard()">Abort Move (Reset)</button>
+        <button class="btn-share" onclick="shareScore()">Export Log 🔗</button>
+    </div>
+    
+    <div class="dev-controls">
+        <button class="btn-dev" onclick="devTimeTravel()">[DEV] TIME TRAVEL</button>
+    </div>
+
+    <div class="gallery" id="gallery-container"></div>
+
+    <script>
+        const START_DATE = new Date("2026-01-01T00:00:00").getTime();
+        const DAILY_WORDS = [
+            'BULLDOZER', 'EXPERIMENT', 'KALEIDOSCOPE', 'BASKETBALL', 'LIFESTYLE',
+            'EXHIBITION', 'CONNECTION', 'DICTIONARY', 'DOMINANCE', 'INFLUENCE',
+            'MICROWAVE', 'APARTMENT', 'GIGANTIC', 'MAGNIFICENT', 'AMBULANCE',
+            'HIGHLIGHT', 'FURNITURE', 'CORPORATE', 'YESTERDAY', 'DINOSAUR',
+            'LEADERSHIP', 'COMPANION', 'INDEPENDENT', 'MACADAMIA', 'GEOGRAPHY',
+            'CONSONANT', 'BLACKSMITH', 'ASTRONAUT', 'ESSENTIAL', 'REVOLUTION',
+            'CIGARETTE', 'BEHAVIOUR', 'MAGNETIC', 'DIRECTION', 'ALGORITHM',
+            'EXPENSIVE', 'BARTENDER', 'CANDIDATE', 'DOCUMENT', 'LITERATURE',
+            'METEORITE', 'HOLOGRAPH', 'WONDERFUL', 'MINIATURE', 'GRANDMOTHER',
+            'PNEUMATIC', 'CATASTROPHE', 'BROADCAST', 'INSPECTOR', 'EMPLOYEE',
+            'CHANDELIER', 'AMBASSADOR', 'DANGEROUS', 'HONEYCOMB', 'INITIATIVE',
+            'BOULEVARD', 'COMPROMISE', 'KNOWLEDGE', 'DEPENDENT', 'LUMBERJACK',
+            'INVESTMENT', 'FOOTBALL', 'CELEBRATE', 'ABUNDANCE', 'ILLUSTRATE',
+            'MECHANICAL', 'DISCOVERY', 'BATTLESHIP', 'CAMPGROUND', 'FASCINATE',
+            'ECONOMICS', 'AERODYNAMIC', 'EFFECTIVE', 'GRASSHOPPER', 'COURAGEOUS',
+            'MARMALADE', 'ELEVATOR', 'GRANDFATHER', 'ENTHUSIASM', 'CHAMPION',
+            'INNOVATION', 'MILLENNIUM', 'DEFENDANT', 'APPARATUS', 'DISASTER',
+            'LANDSCAPE', 'BACKGROUND', 'ALBATROSS', 'IMPORTANT', 'DEVELOPER',
+            'CONFERENCE', 'GENERATION', 'TECHNOLOGY', 'HYDRAULIC', 'MARSHMALLOW',
+            'CARPENTER', 'ANONYMOUS', 'EVIDENCE', 'FINGERPRINT', 'EXECUTIVE',
+            'HYPOTHESIS', 'CROCODILE', 'JACKRABBIT', 'FRANCHISE', 'INGREDIENT',
+            'ISOLATION', 'CHAMELEON', 'EMOTIONAL', 'DIRECTOR', 'STRAWBERRY',
+            'CARDBOARD', 'ELECTRIC', 'MAINTENANCE', 'HELICOPTER', 'METABOLISM',
+            'BARRICADE', 'WATERMELON', 'CONSTRUCT', 'MEDICATION', 'ENVIRONMENT',
+            'GENTLEMAN', 'AMPLIFIER', 'GOVERNMENT', 'ESTABLISH', 'EXTENSION',
+            'CAMOUFLAGE', 'APOCALYPSE', 'EXPANSION', 'MARGARINE', 'BUTTERFLY',
+            'CONFIDENCE', 'MILLIONAIRE', 'ZEPPELIN', 'LEGITIMATE', 'JOURNALIST',
+            'CALCULATOR', 'EARTHQUAKE', 'KANGAROO', 'EXPLOSION', 'CONDUCTOR',
+            'JELLYFISH', 'ATMOSPHERE', 'COMMUNITY', 'ARCHITECT', 'LIVESTOCK',
+            'MANIPULATE', 'HOSPITAL', 'DISAPPEAR', 'EXPERIENCE', 'GREENHOUSE',
+            'COORDINATE', 'CYBERNETIC', 'BLUEBERRY', 'MANAGEMENT', 'INCOGNITO',
+            'DEMOCRACY', 'HANDSHAKE', 'GUARANTEE', 'EXCELLENT', 'MONUMENT',
+            'CORRUPTION', 'CHOCOLATE', 'COGNITIVE', 'HAMBURGER', 'DEPARTMENT',
+            'CHARACTER', 'LEGISLATION', 'COLLECTION', 'MACHINERY', 'MOTORCYCLE',
+            'LANGUAGE', 'MATHEMATICS', 'GUIDELINES', 'BLACKBERRY', 'INVISIBLE',
+            'CRIMINAL', 'ENCOURAGE', 'MAGAZINE', 'BRILLIANT', 'CARTRIDGE',
+            'COMPLICATE', 'ARMADILLO', 'ENERGETIC', 'ICEBREAKER', 'MELANCHOLY',
+            'BACKPACKER', 'ENDURANCE', 'HURRICANE', 'ENTERTAIN', 'INSTRUMENT',
+            'CONTINENT', 'EMERGENCY', 'BILLIONAIRE', 'FORMATION', 'INTELLIGENCE',
+            'AVALANCHE', 'CLASSROOM', 'FIREPLACE', 'ANTARCTICA', 'INTERVIEW',
+            'FLAMINGO', 'MICROPHONE', 'FOUNDATION', 'DESPERATE', 'COSMETICS',
+            'GLADIATOR', 'EQUIPMENT', 'IMPROVEMENT', 'CONTRACTOR', 'COPYRIGHT',
+            'IGNORANCE', 'MANHATTAN', 'IMPRESSION', 'EDUCATION', 'INCENTIVE',
+            'CLOCKWORK', 'INSURANCE', 'DETECTIVE', 'KEYBOARD', 'INCIDENT'
+        ];
+        
+        let realDaysPassed = Math.floor((new Date().getTime() - START_DATE) / (1000 * 60 * 60 * 24));
+        let daysPassed = localStorage.getItem('carver_dev_day') !== null ? parseInt(localStorage.getItem('carver_dev_day')) : realDaysPassed;
+        
+        if (daysPassed > realDaysPassed) {
+            daysPassed = realDaysPassed;
+            localStorage.removeItem('carver_dev_day');
+        }
+        
+        let todayDateStr = `Sector_${daysPassed}`;
+        let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
+
+        document.getElementById('date-display').innerText = `SECTOR #${daysPassed} // BASE: ${dailyWord}`;
+
+        const MAX_EDITS = 10;
+        const MAX_COMBOS = 5;
+        let dictionary = new Set();
+        let isDictLoaded = false;
+        
+        let startingState = []; 
+        let currentState = []; 
+        let editsMade = 0; 
+        let hiddenLetterIndex = -1;
+        
+        let globalScore = 0;
+        let usedWordsThisSession = []; 
+        let usedIndividualWords = new Set(); 
+        let carvesRecord = []; 
+        
+        let moveBaseScore = 0;
+        let bestValidWordsArr = [];
+        let canSubmit = false;
+        let isGameLocked = false;
+
+        async function loadDictionary() {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+                const response = await fetch('https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt', { signal: controller.signal });
+                clearTimeout(timeoutId);
+                
+                // Ensure we actually got the dictionary file, not a rate-limit HTML page
+                if (!response.ok) throw new Error("Rate limited or network error");
+                
+                const text = await response.text();
+                dictionary.clear(); 
+                text.split('\n').forEach(w => dictionary.add(w.trim().toUpperCase()));
+                isDictLoaded = true;
+                document.getElementById('banner').style.display = 'none';
+            } catch (e) {
+                // If blocked, rate-limited, or offline, clear dictionary to trigger fallback logic
+                dictionary.clear(); 
+                document.getElementById('banner').style.display = 'inline-block';
+                document.getElementById('banner').innerText = "SYS: OFFLINE. VALIDATING ALL NON-RED SHAPES.";
+                document.getElementById('banner').style.backgroundColor = "#143d20";
+                document.getElementById('banner').style.color = "#00ff41";
+            }
+            checkGameState();
+        }
+
+       const MAPPING = {
+            'A': [[1,1,1,0,1,1,1,1,0,0,0,0,0,0], [1,1,1,1,1,0,1,1,0,0,0,0,0,0]],
+            'B': [[1,1,1,1,0,0,0,1,0,1,0,0,1,0], [0,0,1,1,1,1,1,1,0,0,0,0,0,0], [0,0,1,1,1,1,1,0,0,0,0,0,0,0]], 
+            'C': [[1,0,0,1,1,1,0,0,0,0,0,0,0,0], [0,0,0,1,1,0,1,0,0,0,0,0,0,0]], 
+            'D': [[1,1,1,1,0,0,0,0,0,1,0,0,1,0], [0,1,1,1,1,0,1,1,0,0,0,0,0,0], [0,1,1,1,1,0,1,0,0,0,0,0,0,0]], 
+            'E': [[1,0,0,1,1,1,1,1,0,0,0,0,0,0], [1,1,0,1,1,1,1,1,0,0,0,0,0,0],[1,0,0,1,1,1,1,0,0,0,0,0,0,0]],
+            'F': [[1,0,0,0,1,1,1,1,0,0,0,0,0,0], [1,0,0,0,1,1,1,0,0,0,0,0,0,0]],
+            'G': [[1,0,1,1,1,1,0,1,0,0,0,0,0,0], [1,1,1,1,0,1,1,1,0,0,0,0,0,0]],
+            'H': [[0,1,1,0,1,1,1,1,0,0,0,0,0,0], [0,0,1,0,1,1,1,1,0,0,0,0,0,0]], 
+            'I': [[1,0,0,1,0,0,0,0,0,1,0,0,1,0], [0,0,0,0,0,0,0,0,0,1,0,0,1,0], [0,1,1,0,0,0,0,0,0,0,0,0,0,0], [0,0,0,0,1,1,0,0,0,0,0,0,0,0]], 
+            'J': [[0,1,1,1,1,0,0,0,0,0,0,0,0,0]],
+            'K': [[0,0,0,0,1,1,1,0,0,0,1,0,0,1], [0,0,0,0,1,1,0,0,0,0,1,0,0,1]],
+            'L': [[0,0,0,1,1,1,0,0,0,0,0,0,0,0]], 
+            'M': [[0,1,1,0,1,1,0,0,1,0,1,0,0,0], [0,1,0,0,0,1,0,0,1,0,1,0,0,0]],
+            'N': [[0,1,1,0,1,1,0,0,1,0,0,0,0,1], [0,0,1,0,1,0,1,1,0,0,0,0,0,0], [0,0,0,0,0,1,0,0,1,1,0,0,0,0], [0,0,1,0,0,0,0,0,0,0,0,0,1,1]], 
+            'O': [[1,1,1,1,1,1,0,0,0,0,0,0,0,0], [0,0,1,1,1,0,1,1,0,0,0,0,0,0]], 
+            'P': [[1,1,0,0,1,1,1,1,0,0,0,0,0,0]],
+            'Q': [[1,1,1,1,1,1,0,0,0,0,0,0,0,1]],
+            'R': [[1,1,0,0,1,1,1,1,0,0,0,0,0,1], [0,0,0,0,1,0,1,0,0,0,0,0,0,0], [1,0,0,0,1,1,1,0,0,0,1,0,0,1]], 
+            'S': [[1,0,1,1,0,1,1,1,0,0,0,0,0,0], [1,0,0,0,0,0,1,0,1,0,0,0,0,0], [0,0,0,1,0,0,0,1,0,0,0,0,0,1]],            
+            'T': [[1,0,0,0,0,0,0,0,0,1,0,0,1,0], [0,0,0,1,1,1,1,1,0,0,0,0,0,0], [1,0,0,0,0,0,0,0,0,1,0,0,0,0]], 
+            'U': [[0,1,1,1,1,1,0,0,0,0,0,0,0,0], [0,0,1,1,1,0,0,0,0,0,0,0,0,0]], 
+            'V': [[0,0,0,0,1,1,0,0,0,0,1,1,0,0],[0,1,1,0,0,0,0,0,1,0,0,0,0,1],[0,1,0,0,0,1,0,0,0,0,0,1,0,1], [0,0,0,0,0,0,0,0,1,0,1,0,0,0]], 
+            'W': [[0,1,1,0,1,1,0,0,0,0,0,1,0,1], [0,0,1,0,1,0,0,0,0,0,0,1,0,1]], 
+            'X': [[0,0,0,0,0,0,0,0,1,0,1,1,0,1]],
+            'Y': [[0,0,0,0,0,0,0,0,1,0,1,0,1,0], [0,1,0,0,0,1,1,1,0,0,0,0,1,0], [0,1,1,0,0,0,0,0,1,0,1,0,0,0]],
+            'Z': [[1,0,0,1,0,0,0,0,0,0,1,1,0,0], [0,0,0,1,0,0,1,0,0,0,0,1,0,0], [1,0,0,0,0,0,0,1,0,0,1,0,0,0]],
+            ' ': [[0,0,0,0,0,0,0,0,0,0,0,0,0,0]],
+            '@': [[1,0,1,1,1,1,0,0,0,0,0,0,0,0]] /* Custom intermediate 'O' splice */
+        };
+
+        const VALID_STATE_MAP = {};
+        for (let char in MAPPING) {
+            if (char === '@') continue; 
+            MAPPING[char].forEach(arr => { VALID_STATE_MAP[arr.join(',')] = char; });
+        }
+
+        const SEGMENT_LINES = [
+            {x1:15, y1:10, x2:85, y2:10}, {x1:90, y1:15, x2:90, y2:65}, {x1:90, y1:75, x2:90, y2:125},
+            {x1:15, y1:130, x2:85, y2:130}, {x1:10, y1:75, x2:10, y2:125}, {x1:10, y1:15, x2:10, y2:65},
+            {x1:15, y1:70, x2:45, y2:70}, {x1:55, y1:70, x2:85, y2:70}, {x1:15, y1:15, x2:45, y2:65},
+            {x1:50, y1:15, x2:50, y2:65}, {x1:85, y1:15, x2:55, y2:65}, {x1:15, y1:125, x2:45, y2:75},
+            {x1:50, y1:125, x2:50, y2:75}, {x1:85, y1:125, x2:55, y2:75}
+        ];
+
+        
+        function buildHelpUI() {
+            let html = '';
+            for (let char in MAPPING) {
+                if (char === ' ' || char === '@') continue; 
+                html += `<div class="help-card">
+                            <div class="help-card-title">${char}</div>
+                            <div class="help-card-svgs">`;
+                
+                MAPPING[char].forEach(stateArr => {
+                    html += `<svg viewBox="0 0 100 140" style="width:25px; height:35px; transform: skewX(-10deg); overflow: visible;">`;
+                    for(let i=0; i<14; i++) {
+                        let isOn = stateArr[i];
+                        let classStr = isOn ? 'seg-on' : 'seg-off';
+                        html += `<line x1="${SEGMENT_LINES[i].x1}" y1="${SEGMENT_LINES[i].y1}" x2="${SEGMENT_LINES[i].x2}" y2="${SEGMENT_LINES[i].y2}" class="${classStr}" stroke-width="14" stroke-linecap="round"></line>`;
+                    }
+                    html += `</svg>`;
+                });
+                
+                html += `   </div>
+                         </div>`;
+            }
+            document.getElementById('help-grid').innerHTML = html;
+        }
+
+        const EMOJI_NUMS = ['0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣'];
+        function getEmojiNum(n) {
+            if (n >= 10) return '🔟';
+            return EMOJI_NUMS[n];
+        }
+
+        function updateHistoryUI() {
+            let gameHistory = JSON.parse(localStorage.getItem('carver_history')) || {};
+            let totalScore = 0;
+            let daysPlayed = 0;
+            let keys = Object.keys(gameHistory).map(Number).sort((a,b) => b - a);
+            
+            for (let key of keys) {
+                totalScore += gameHistory[key].score;
+                daysPlayed++;
+            }
+            let avgScore = daysPlayed > 0 ? Math.floor(totalScore / daysPlayed) : 0;
+            
+            let dayOfWeekIndex = (daysPassed + 3) % 7; 
+            let startOfWeekSector = daysPassed - dayOfWeekIndex;
+            
+            let weeklyScore = 0;
+            for (let i = startOfWeekSector; i <= startOfWeekSector + 6; i++) {
+                if (gameHistory[i]) {
+                    weeklyScore += gameHistory[i].score;
+                }
+            }
+            
+            document.getElementById('history-stats').innerHTML = `
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>AVG YIELD:</span> <strong style="color:var(--accent)">${avgScore}</strong></div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>WEEKLY YIELD:</span> <strong style="color:var(--accent)">${weeklyScore}</strong></div>
+                <div style="display:flex; justify-content:space-between;"><span>SECTORS CLEARED:</span> <strong style="color:var(--accent)">${daysPlayed}</strong></div>
+            `;
+            
+            let listHtml = keys.map(k => {
+                let entry = gameHistory[k];
+                return `<div style="border-left: 2px solid var(--accent); padding-left: 8px; margin-bottom: 10px;">
+                    <strong>Sector #${k}</strong> <span style="color:#a1a1aa; font-size: 0.8em;">(${entry.baseWord || '?'})</span><br>
+                    Yield: <span style="color:var(--accent)">${entry.score}</span><br>
+                    <span style="color:#71717a; font-size: 0.8em;">${entry.words.join(' + ')}</span>
+                </div>`;
+            }).join('');
+            
+            if (keys.length === 0) listHtml = "<div style='color:#71717a; text-align:center;'>NO LOGS FOUND.</div>";
+            document.getElementById('history-list').innerHTML = listHtml;
+        }
+
+        function checkGameState() {
+            let lastDate = localStorage.getItem('carver_last_date');
+            let defaultState = dailyWord.split('').map(c => [...(MAPPING[c][0] || MAPPING[' '][0])]);
+            startingState = defaultState.map(arr => [...arr]); 
+            
+            if (lastDate === todayDateStr) {
+                let savedBoard = JSON.parse(localStorage.getItem('carver_board_state'));
+                currentState = savedBoard || defaultState.map(arr => [...arr]);
+                
+                hiddenLetterIndex = parseInt(localStorage.getItem('carver_hidden_index')) || -1;
+                globalScore = parseInt(localStorage.getItem('carver_daily_score')) || 0;
+                
+                let savedCombos = JSON.parse(localStorage.getItem('carver_used_combos'));
+                if (savedCombos) usedWordsThisSession = savedCombos;
+                
+                let savedIndiv = JSON.parse(localStorage.getItem('carver_used_individual_words'));
+                if (savedIndiv) usedIndividualWords = new Set(savedIndiv);
+
+                let savedCarves = JSON.parse(localStorage.getItem('carver_record'));
+                if (savedCarves) carvesRecord = savedCarves;
+                
+                usedWordsThisSession.forEach(c => {
+                    let html = `<div class="gallery-item"><div class="gallery-info"><h3>${c}</h3></div></div>`;
+                    document.getElementById('gallery-container').insertAdjacentHTML('beforeend', html);
+                });
+                
+            } else {
+                currentState = defaultState.map(arr => [...arr]);
+                hiddenLetterIndex = -1;
+                globalScore = 0;
+                usedWordsThisSession = [];
+                usedIndividualWords.clear();
+                carvesRecord = [];
+                
+                localStorage.setItem('carver_last_date', todayDateStr);
+                localStorage.setItem('carver_daily_score', globalScore);
+                localStorage.setItem('carver_used_combos', JSON.stringify([]));
+                localStorage.setItem('carver_used_individual_words', JSON.stringify([]));
+                localStorage.setItem('carver_record', JSON.stringify([]));
+                localStorage.setItem('carver_board_state', JSON.stringify(currentState));
+                localStorage.setItem('carver_hidden_index', hiddenLetterIndex);
+            }
+            
+            recalculateEdits();
+
+            if (usedWordsThisSession.length >= MAX_COMBOS) {
+                isGameLocked = true;
+            }
+
+            document.getElementById('global-score').innerText = globalScore;
+            document.getElementById('combos-count').innerText = `${usedWordsThisSession.length}/${MAX_COMBOS}`;
+            renderMainWord();
+            updateStats();
+            updateHistoryUI();
+        }
+
+        function recalculateEdits() {
+            editsMade = 0;
+            for(let i=0; i<currentState.length; i++) {
+                if (i === hiddenLetterIndex) continue; 
+                for(let j=0; j<14; j++) {
+                    if (currentState[i][j] !== startingState[i][j]) editsMade++;
+                }
+            }
+        }
+
+        function getLetterChar(stateArr, letterIdx) { 
+            if (letterIdx === hiddenLetterIndex) return ' ';
+            return VALID_STATE_MAP[stateArr.join(',')] || '?'; 
+        }
+
+        function toggleSegment(letterIdx, segIdx) {
+            if (isGameLocked) return;
+
+            let isCurrentlyEdited = currentState[letterIdx][segIdx] !== startingState[letterIdx][segIdx];
+            
+            if (!isCurrentlyEdited && editsMade >= MAX_EDITS) {
+                let el = document.getElementById('edits-left');
+                el.classList.add('danger');
+                setTimeout(() => el.classList.remove('danger'), 300);
+                return;
+            }
+
+            currentState[letterIdx][segIdx] ^= 1;
+            
+            recalculateEdits();
+            renderMainWord();
+            updateStats();
+        }
+
+        function toggleHide(idx) {
+            if (isGameLocked) return;
+            
+            let prevHidden = hiddenLetterIndex;
+            hiddenLetterIndex = (hiddenLetterIndex === idx) ? -1 : idx;
+            
+            recalculateEdits();
+            
+            if (editsMade > MAX_EDITS) {
+                hiddenLetterIndex = prevHidden; 
+                recalculateEdits();
+                let el = document.getElementById('edits-left');
+                el.classList.add('danger');
+                setTimeout(() => el.classList.remove('danger'), 300);
+                return;
+            }
+            
+            renderMainWord();
+            updateStats();
+        }
+
+        function getSVGHTML(stateArr, letterIdx, interactive) {
+            let isHidden = (letterIdx === hiddenLetterIndex);
+            let char = getLetterChar(stateArr, letterIdx);
+            let isInvalid = (char === '?');
+            
+            let svg = `<svg viewBox="0 0 100 140" class="letter ${interactive && !isGameLocked && !isHidden ? 'interactive' : ''}">`;
+            for(let i=0; i<14; i++) {
+                let isOn = isHidden ? 0 : stateArr[i];
+                let classStr = isOn ? (isInvalid ? 'seg-invalid' : 'seg-on') : 'seg-off';
+                let events = interactive && !isGameLocked && !isHidden ? `onpointerdown="toggleSegment(${letterIdx}, ${i})"` : '';
+                
+                svg += `<line x1="${SEGMENT_LINES[i].x1}" y1="${SEGMENT_LINES[i].y1}" x2="${SEGMENT_LINES[i].x2}" y2="${SEGMENT_LINES[i].y2}" class="${classStr}"></line>`;
+                
+                if (interactive && !isGameLocked && !isHidden) {
+                    svg += `<line x1="${SEGMENT_LINES[i].x1}" y1="${SEGMENT_LINES[i].y1}" x2="${SEGMENT_LINES[i].x2}" y2="${SEGMENT_LINES[i].y2}" stroke="transparent" stroke-width="25" style="cursor:pointer;" ${events}></line>`;
+                }
+            }
+            
+            let dotClass = isHidden ? 'dot-voided' : 'dot-active';
+            svg += `<circle cx="90" cy="132" r="7" class="${dotClass}"></circle>`;
+            
+            if (interactive && !isGameLocked) {
+                svg += `<circle cx="90" cy="132" r="25" fill="transparent" style="cursor:pointer;" onpointerdown="toggleHide(${letterIdx})"></circle>`;
+            }
+            
+            svg += `</svg>`;
+            return `<div class="letter-wrapper">${svg}</div>`;
+        }
+
+        function resetBoard() {
+            if (isGameLocked) return;
+            currentState = startingState.map(arr => [...arr]);
+            hiddenLetterIndex = -1;
+            recalculateEdits();
+            renderMainWord();
+            updateStats();
+        }
+
+        function renderMainWord() {
+            document.getElementById('main-word').innerHTML = currentState.map((state, i) => getSVGHTML(state, i, true)).join('');
+        }
+
+        function updateStats() {
+            if (isGameLocked) {
+                document.getElementById('current-valid-word').innerText = "SECTOR COMPLETE.";
+                document.getElementById('current-valid-word').style.color = "var(--accent)";
+                document.getElementById('submit-btn').disabled = true;
+                document.getElementById('edits-left').innerText = 0;
+                
+                // Ensure all letters stay fully visible when game is locked
+                let wrappers = document.querySelectorAll('#main-word .letter-wrapper');
+                wrappers.forEach(w => w.classList.remove('letter-dimmed'));
+                return;
+            }
+
+            let currentChars = currentState.map((state, idx) => getLetterChar(state, idx));
+            document.getElementById('parsed-reading').innerHTML = currentChars.map(c => c === ' ' ? '&nbsp;' : (c === '?' ? '<span class="invalid">?</span>' : c)).join('');
+
+            // Map out where each word starts and ends
+            let currentWordStr = currentChars.join('');
+            let wordsWithIndices = [];
+            let match;
+            let regex = /\S+/g;
+            while ((match = regex.exec(currentWordStr)) !== null) {
+                wordsWithIndices.push({
+                    word: match[0],
+                    startIndex: match.index,
+                    endIndex: match.index + match[0].length - 1
+                });
+            }
+
+            bestValidWordsArr = [];
+            moveBaseScore = 0;
+            canSubmit = false;
+            
+            let duplicateWord = null;
+            let restrictedWord = null;
+            let validIndices = new Set();
+
+            for (let wInfo of wordsWithIndices) {
+                let w = wInfo.word.toUpperCase();
+                if (w.includes('?')) continue; 
+                
+                if (dictionary.size === 0 || dictionary.has(w)) {
+                    if (usedIndividualWords.has(w)) {
+                        duplicateWord = w;
+                    } else if (w === dailyWord) {
+                        restrictedWord = w;
+                    } else {
+                        bestValidWordsArr.push(w);
+                        moveBaseScore += (w.length * w.length * 10);
+                        // Mark these specific letter positions as valid
+                        for(let i = wInfo.startIndex; i <= wInfo.endIndex; i++) {
+                            validIndices.add(i);
+                        }
+                    }
+                }
+            }
+
+            let editsLeft = MAX_EDITS - editsMade;
+            document.getElementById('edits-left').innerText = editsLeft;
+
+            let multiplier = 1 + (editsLeft / MAX_EDITS);
+            let projScore = Math.floor(moveBaseScore * multiplier);
+            document.getElementById('proj-score').innerText = projScore;
+            
+            let wordDisplay = document.getElementById('current-valid-word');
+            let isInitialState = (editsMade === 0 && hiddenLetterIndex === -1);
+            
+            if (isInitialState) {
+                wordDisplay.innerText = "AWAITING INPUT...";
+                wordDisplay.style.color = "#71717a";
+                canSubmit = false;
+            } else if (bestValidWordsArr.length > 0) {
+                // LENIENT MODE: We have at least one valid target!
+                wordDisplay.innerText = bestValidWordsArr.join(' + ');
+                wordDisplay.style.color = "var(--accent)";
+                canSubmit = true;
+                
+                // Add small warnings if other words on the board were ignored
+                if (duplicateWord) {
+                    wordDisplay.innerHTML += ` <span style="color:#71717a; font-size:0.7em;">(Ignored: ${duplicateWord})</span>`;
+                } else if (restrictedWord) {
+                    wordDisplay.innerHTML += ` <span style="color:#71717a; font-size:0.7em;">(Ignored: BASE)</span>`;
+                }
+            } else {
+                // No valid targets anywhere on the board
+                if (duplicateWord) {
+                    wordDisplay.innerText = `ERR: '${duplicateWord}' DUPLICATE`;
+                } else if (restrictedWord) {
+                    wordDisplay.innerText = `ERR: BASE WORD RESTRICTED`;
+                } else {
+                    wordDisplay.innerText = "ERR: NO VALID TARGETS";
+                }
+                wordDisplay.style.color = "var(--danger)";
+                canSubmit = false;
+            }
+
+            document.getElementById('submit-btn').disabled = !canSubmit;
+
+            // Apply dimming dynamically ONLY to the segments, preserving dots
+            let letterWrappers = document.querySelectorAll('#main-word .letter-wrapper');
+            for (let i = 0; i < letterWrappers.length; i++) {
+                // Clear any leftover inline styles from the previous code
+                letterWrappers[i].style.opacity = ''; 
+
+                if (isInitialState || currentChars[i] === ' ') {
+                    // Voided spaces and pristine board stay fully bright
+                    letterWrappers[i].classList.remove('letter-dimmed');
+                } else if (validIndices.has(i)) {
+                    // Valid words stay fully bright
+                    letterWrappers[i].classList.remove('letter-dimmed');
+                } else {
+                    // Invalid, duplicate, or restricted segments are gently dimmed
+                    letterWrappers[i].classList.add('letter-dimmed');
+                }
+            }
+        }
+
+        function saveCombo() {
+            if (!canSubmit || isGameLocked) return;
+            if (editsMade === 0 && hiddenLetterIndex === -1) return;
+            
+            let comboStr = bestValidWordsArr.join(' + ');
+            let editsLeft = MAX_EDITS - editsMade;
+            let multiplier = 1 + (editsLeft / MAX_EDITS);
+            let finalScore = Math.floor(moveBaseScore * multiplier);
+            
+            globalScore += finalScore;
+            usedWordsThisSession.push(comboStr);
+            bestValidWordsArr.forEach(w => usedIndividualWords.add(w));
+            
+            let carvesPerLetter = [];
+            for (let i = 0; i < currentState.length; i++) {
+                if (i === hiddenLetterIndex) {
+                    carvesPerLetter.push('🔴'); 
+                    continue;
+                }
+                let diff = 0;
+                for (let j = 0; j < 14; j++) {
+                    if (currentState[i][j] !== startingState[i][j]) diff++;
+                }
+                carvesPerLetter.push(getEmojiNum(diff));
+            }
+            carvesRecord.push(carvesPerLetter.join(''));
+            
+            let html = `<div class="gallery-item">
+                <div class="gallery-svgs">${currentState.map((state, idx) => getSVGHTML(state, idx, false)).join('')}</div>
+                <div class="gallery-info">
+                    <h3>${comboStr}</h3>
+                    <p>+${finalScore} PTS (Cost: ${editsMade})</p>
+                </div>
+            </div>`;
+            document.getElementById('gallery-container').insertAdjacentHTML('afterbegin', html);
+
+            currentState = startingState.map(arr => [...arr]);
+            hiddenLetterIndex = -1;
+            recalculateEdits();
+            
+            localStorage.setItem('carver_daily_score', globalScore);
+            localStorage.setItem('carver_used_combos', JSON.stringify(usedWordsThisSession));
+            localStorage.setItem('carver_used_individual_words', JSON.stringify([...usedIndividualWords]));
+            localStorage.setItem('carver_record', JSON.stringify(carvesRecord));
+            localStorage.setItem('carver_board_state', JSON.stringify(currentState));
+            localStorage.setItem('carver_hidden_index', hiddenLetterIndex);
+            
+            let gameHistory = JSON.parse(localStorage.getItem('carver_history')) || {};
+            gameHistory[daysPassed] = { score: globalScore, words: usedWordsThisSession, baseWord: dailyWord };
+            localStorage.setItem('carver_history', JSON.stringify(gameHistory));
+            
+            document.getElementById('global-score').innerText = globalScore;
+            document.getElementById('combos-count').innerText = `${usedWordsThisSession.length}/${MAX_COMBOS}`;
+            
+            if (usedWordsThisSession.length >= MAX_COMBOS) {
+                isGameLocked = true;
+                alert("ALL 5 SECTORS COMPLETE. EXPORT YOUR LOG.");
+            }
+
+            updateStats();
+            renderMainWord();
+            updateHistoryUI();
+        }
+
+        function shareScore() {
+            let text = `FLUORESCENT Sector #${daysPassed} 🪚\n`;
+            text += `Total Score: ${globalScore} 🏆\n`;
+            text += `Splices Executed: ${usedWordsThisSession.length}/${MAX_COMBOS} ✨\n\n`;
+            text += `${dailyWord}\n`;
+            
+            carvesRecord.forEach(record => {
+                text += `${record}\n`;
+            });
+            
+            text += `\nPlay at: lachlanmcfarlane-a11y.github.io/word_carver`;
+
+            navigator.clipboard.writeText(text).then(() => {
+                alert("Log copied to clipboard. Ready to transmit.");
+            }).catch(err => {
+                prompt("Copy this text to share:", text);
+            });
+        }
+        
+        function devTimeTravel() {
+            let realDay = Math.floor((new Date().getTime() - START_DATE) / (1000 * 60 * 60 * 24));
+            let currentOverride = localStorage.getItem('carver_dev_day') !== null ? parseInt(localStorage.getItem('carver_dev_day')) : realDay;
+            
+            let targetDay = prompt(`SYS: REAL WORLD SECTOR IS ${realDay}.\nEnter a past sector number (0 to ${realDay}) to travel to:`, currentOverride);
+            
+            if (targetDay === null || targetDay === "") return;
+            targetDay = parseInt(targetDay);
+            
+            if (isNaN(targetDay) || targetDay < 0) {
+                alert("ERR: INVALID TEMPORAL COORDINATES.");
+                return;
+            }
+            if (targetDay > realDay) {
+                alert("ERR: TEMPORAL PARADOX DETECTED. FUTURE TRAVEL IS STRICTLY PROHIBITED.");
+                return;
+            }
+            
+            localStorage.removeItem('carver_last_date');
+            localStorage.removeItem('carver_daily_score');
+            localStorage.removeItem('carver_used_combos');
+            localStorage.removeItem('carver_used_individual_words');
+            localStorage.removeItem('carver_record');
+            localStorage.removeItem('carver_board_state');
+            localStorage.removeItem('carver_hidden_index');
+            
+            localStorage.setItem('carver_dev_day', targetDay);
+            location.reload();
+        }
+
+        const TITLE_STATES = [
+            [ 'F', 'L', 'U', 'O', 'R', 'E', 'S', 'C', 'E', 'N', 'T' ], // Base
+            [ 'F', 'L', '.', 'O', 'R', 'E', 'S', 'C', 'E', 'N', 'T' ], // U voided
+            [ 'F', 'L', '.', '@', 'R', 'E', 'S', 'C', 'E', 'N', 'T' ], // O spliced once
+            [ 'F', 'L', '.', 'C', 'R', 'E', 'S', 'C', 'E', 'N', 'T' ], // Completed splice to C
+            [ 'F', 'L', 'U', 'O', 'R', 'E', 'S', 'C', 'E', 'N', 'T' ], // Base
+            [ 'F', 'L', 'U', 'O', 'R', '.', 'S', 'C', 'E', 'N', 'T' ], // E voided
+            [ 'F', 'L', 'U', 'O', 'R', 'E', 'S', 'C', 'E', 'N', 'T' ], // Base
+            [ 'F', 'L', 'U', 'O', 'R', 'E', '.', 'C', 'E', 'N', 'T' ]  // S voided
+        ];
+
+        let currentTitleState = 0;
+        
+     function animateTitle() {
+            let container = document.getElementById('animated-title');
+            if(!container) return;
+            
+            let chars = TITLE_STATES[currentTitleState];
+            let html = '';
+            
+            // NEW: Parse the title text into words to check against the dictionary
+            let titleStr = chars.map(c => c === '.' ? ' ' : c).join('');
+            let wordsWithIndices = [];
+            let match;
+            let regex = /\S+/g;
+            while ((match = regex.exec(titleStr)) !== null) {
+                wordsWithIndices.push({
+                    word: match[0],
+                    startIndex: match.index,
+                    endIndex: match.index + match[0].length - 1
+                });
+            }
+
+            let validIndices = new Set();
+            for (let wInfo of wordsWithIndices) {
+                let w = wInfo.word.toUpperCase();
+                if (w.includes('?') || w.includes('@')) continue; 
+                
+                // If dictionary is loaded and word is valid, mark its indices
+                if (dictionary.size === 0 || dictionary.has(w)) {
+                    for(let i = wInfo.startIndex; i <= wInfo.endIndex; i++) {
+                        validIndices.add(i);
+                    }
+                }
+            }
+
+            // Treat the base "FLUORESCENT" frames as a pristine board
+            let isInitialState = (currentTitleState === 0 || currentTitleState === 4 || currentTitleState === 6);
+
+            for(let i=0; i<chars.length; i++) {
+                let isHidden = (chars[i] === '.');
+                let targetChar = isHidden ? ' ' : chars[i];
+                let stateArr = MAPPING[targetChar] ? MAPPING[targetChar][0] : MAPPING[' '][0];
+                
+                let charCode = VALID_STATE_MAP[stateArr.join(',')] || '?';
+                let isInvalid = (charCode === '?' && !isHidden && targetChar !== ' ');
+                
+                // NEW: Decide whether to dim this specific title letter
+                let dimClass = '';
+                if (isInitialState || isHidden) {
+                    // Pristine state and void spaces stay at full brightness
+                } else if (validIndices.has(i) && !isInvalid) {
+                    // Valid words stay at full brightness
+                } else {
+                    // Invalid/junk chunks (like FLUORE) dim into the background!
+                    dimClass = ' letter-dimmed';
+                }
+                
+                let svg = `<svg viewBox="0 0 100 140" class="title-letter">`;
+                for(let j=0; j<14; j++) {
+                    let isOn = isHidden ? 0 : stateArr[j];
+                    let classStr = isOn ? (isInvalid ? 'seg-invalid' : 'seg-on') : 'seg-off';
+                    svg += `<line x1="${SEGMENT_LINES[j].x1}" y1="${SEGMENT_LINES[j].y1}" x2="${SEGMENT_LINES[j].x2}" y2="${SEGMENT_LINES[j].y2}" class="${classStr}"></line>`;
+                }
+                let dotClass = isHidden ? 'dot-voided' : 'dot-active';
+                svg += `<circle cx="90" cy="132" r="7" class="${dotClass}"></circle>`;
+                svg += `</svg>`;
+                
+                html += `<div class="letter-wrapper${dimClass}" style="margin: 0 1px;">${svg}</div>`;
+            }
+            
+            container.innerHTML = html;
+            currentTitleState = (currentTitleState + 1) % TITLE_STATES.length;
+        }
+
+        window.onload = () => { 
+            loadDictionary(); 
+            buildHelpUI(); 
+            animateTitle();
+            setInterval(animateTitle, 3000); 
+        };
+    </script>
+</body>
+</html>
