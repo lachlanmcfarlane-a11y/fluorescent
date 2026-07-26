@@ -233,9 +233,112 @@
         .help-card { border: 1px solid #143d20; background: var(--panel); border-radius: 6px; padding: 8px; display: flex; flex-direction: column; align-items: center; }
         .help-card-title { color: #fff; font-weight: bold; margin-bottom: 5px; font-size: 1.1rem;}
         .help-card-svgs { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;}
+
 </style>
 </head>
 <body>
+<!-- 1. ADD THIS BUTTON ANYWHERE IN YOUR HEADER/NAV -->
+<button class="how-to-btn" onclick="document.getElementById('welcome-modal').style.display='flex'">HOW TO PLAY</button>
+<!-- WELCOME MODAL SYSTEM -->
+<style>
+    /* Modal Layout */
+    #welcome-modal {
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(4, 12, 8, 0.97); z-index: 10000;
+        display: none; justify-content: center; align-items: center;
+        padding: 15px; font-family: inherit; backdrop-filter: blur(8px);
+    }
+    .welcome-box {
+        background: #020804; border: 1px solid var(--accent); border-radius: 8px;
+        padding: 30px 20px; max-width: 600px; width: 100%;
+        box-shadow: 0 0 40px rgba(85, 255, 204, 0.15); text-align: center;
+    }
+    .welcome-title {
+        color: var(--accent); font-size: 1.6rem; margin-bottom: 25px;
+        letter-spacing: 3px; text-shadow: 0 0 10px var(--accent-glow);
+    }
+    
+    /* 1:1 Game Match Board Styling */
+    .demo-board {
+        display: flex; justify-content: center; gap: 2px; margin-bottom: 25px;
+        background: rgba(0, 0, 0, 0.6); padding: 15px 10px; border-radius: 6px;
+        border: 1px solid #1a2a22;
+    }
+    .demo-cell {
+        position: relative; 
+        width: clamp(20px, 5vw, 36px); 
+        height: clamp(28px, 7vw, 50px);
+        transition: opacity 0.3s ease;
+    }
+    .demo-vfd { 
+        width: 100%; height: 100%; 
+        transform: skewX(-10deg); 
+        overflow: visible; 
+    }
+    .demo-vfd line { 
+        stroke-width: 14; stroke-linecap: round; transition: all 0.2s ease; 
+    }
+    .demo-vfd circle { 
+        transition: all 0.3s ease; 
+    }
+
+    /* Annotation Text */
+    .anno-container { position: relative; height: 85px; margin-bottom: 20px; }
+    .anno-text {
+        position: absolute; width: 100%; color: #d4d4d8;
+        font-size: 0.95rem; line-height: 1.5; display: none;
+    }
+    .anno-highlight { color: var(--accent); font-weight: bold; display: block; margin-bottom: 5px; }
+    
+    /* Buttons */
+    .how-to-btn {
+        background: transparent; border: 1px solid var(--accent); color: var(--accent);
+        padding: 6px 16px; border-radius: 4px; font-family: inherit; font-size: 0.9rem;
+        font-weight: bold; cursor: pointer; text-transform: uppercase;
+        letter-spacing: 1px; transition: background 0.2s;
+    }
+    .how-to-btn:hover { background: rgba(85, 255, 204, 0.15); }
+    
+    .welcome-btn {
+        background: var(--accent); color: #000; border: none; padding: 15px 30px;
+        font-size: 1.1rem; font-weight: bold; cursor: pointer; width: 100%;
+        border-radius: 4px; text-transform: uppercase; letter-spacing: 2px;
+        box-shadow: 0 0 10px var(--accent-glow);
+    }
+    .welcome-btn:hover { transform: scale(0.98); }
+
+    @media (max-width: 550px) {
+        .anno-text { font-size: 0.85rem; }
+    }
+</style>
+
+<div id="welcome-modal">
+    <div class="welcome-box">
+        <div class="welcome-title">HOW TO PLAY</div>
+        
+        <div class="demo-board" id="demo-board"></div>
+
+           <div class="anno-container">
+            <div class="anno-text" id="anno-1">
+                <span class="anno-highlight">1. THE BASE WORD</span>
+                Your objective is to find and bank valid words out of the daily 14-segment vacuum fluorescent display sequence.
+            </div>
+            <div class="anno-text" id="anno-2">
+                <span class="anno-highlight">2. VOIDING (CREATING A SPACE)</span>
+                Click a dot to dim <strong>one letter</strong> entirely. This creates a space and costs 0 segment splices.
+            </div>
+            <div class="anno-text" id="anno-3">
+                <span class="anno-highlight">3. SEGMENT SPLICING</span>
+                Toggle segments to morph invalid words into valid ones. Up to 10 segment splices can be made. On mobile you can pinch-to-zoom if it is hard to splice the right segment.
+            </div>
+        </div>
+
+        <button class="welcome-btn" onclick="document.getElementById('welcome-modal').style.display='none'; localStorage.setItem('fluorescent_welcomed', 'true');">
+            INITIALIZE SYSTEM
+        </button>
+    </div>
+</div>
+
 
     <div class="top-bar">
         <div class="history-container" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); z-index: 101;">
@@ -1033,5 +1136,158 @@
             setInterval(animateTitle, 3000); 
         };
     </script>
+    
+<script>
+   (function initDemo() {
+        // Fallback or explicit character segment mapping for a 14-segment display
+        const FALLBACK_MAPPING = {
+            'F': [[0, 4, 5, 6, 9]],
+            'L': [[4, 3]],
+            'U': [[1, 2, 3, 4, 5]],
+            'O': [[0, 1, 2, 3, 4, 5]],
+            'R': [[0, 4, 5, 6, 9, 13]],
+            'E': [[0, 3, 4, 5, 6]],
+            'S': [[0, 2, 3, 5, 6, 7]],
+            'C': [[0, 3, 4, 5]],
+            'N': [[1, 2, 4, 5, 8, 10]],
+            'T': [[0, 9]]
+        };
+
+        const activeMapping = (typeof MAPPING !== 'undefined') ? MAPPING : FALLBACK_MAPPING;
+
+        const charMap = {
+            'F': activeMapping['F'] ? activeMapping['F'][0] : [],
+            'L': activeMapping['L'] ? activeMapping['L'][0] : [],
+            'U': activeMapping['U'] ? activeMapping['U'][0] : [],
+            'O': activeMapping['O'] ? activeMapping['O'][0] : [],
+            'R': activeMapping['R'] ? activeMapping['R'][0] : [],
+            'E': activeMapping['E'] ? activeMapping['E'][0] : [],
+            'S': activeMapping['S'] ? activeMapping['S'][0] : [],
+            'C': activeMapping['C'] ? activeMapping['C'][0] : [],
+            'N': activeMapping['N'] ? activeMapping['N'][0] : [],
+            'T': activeMapping['T'] ? activeMapping['T'][0] : []
+        };
+        
+        const SEG_LINES = [
+            {x1:15, y1:10, x2:85, y2:10}, {x1:90, y1:15, x2:90, y2:65}, {x1:90, y1:75, x2:90, y2:125},
+            {x1:15, y1:130, x2:85, y2:130}, {x1:10, y1:75, x2:10, y2:125}, {x1:10, y1:15, x2:10, y2:65},
+            {x1:15, y1:70, x2:45, y2:70}, {x1:55, y1:70, x2:85, y2:70}, {x1:15, y1:15, x2:45, y2:65},
+            {x1:50, y1:15, x2:50, y2:65}, {x1:85, y1:15, x2:55, y2:65}, {x1:15, y1:125, x2:45, y2:75},
+            {x1:50, y1:125, x2:50, y2:75}, {x1:85, y1:125, x2:55, y2:75}
+        ];
+
+        const board = document.getElementById('demo-board');
+        if (!board) return;
+
+        let html = '';
+        'FLUORESCENT'.split('').forEach((c, idx) => {
+            let activeSegments = charMap[c] || [];
+            let svg = `<svg viewBox="0 0 100 140" class="demo-vfd">`;
+            for(let i=0; i<14; i++) {
+                let isOn = activeSegments.length === 14 ? activeSegments[i] : activeSegments.includes(i);
+                let classStr = isOn ? 'seg-on' : 'seg-off';
+                
+                svg += `<line id="demo-seg-${idx}-${i}" x1="${SEG_LINES[i].x1}" y1="${SEG_LINES[i].y1}" x2="${SEG_LINES[i].x2}" y2="${SEG_LINES[i].y2}" class="${classStr}"></line>`;
+            }
+            svg += `<circle id="demo-dot-${idx}" cx="90" cy="132" r="7" class="dot-active"></circle>`;
+            svg += `</svg>`;
+            html += `<div class="demo-cell" id="demo-cell-${idx}">${svg}</div>`;
+        });
+        board.innerHTML = html;
+
+        function setWordOpacity(start, end, op) {
+            for(let i=start; i<=end; i++) {
+                const cell = document.getElementById(`demo-cell-${i}`);
+                if(cell) cell.style.opacity = op;
+            }
+        }
+
+        function setVoid(idx, isVoid) {
+            const cell = document.getElementById(`demo-cell-${idx}`);
+            if (!cell) return;
+            const dot = document.getElementById(`demo-dot-${idx}`);
+            const lines = cell.querySelectorAll('line');
+            if(isVoid) {
+                lines.forEach(l => l.style.opacity = '0');
+                if(dot) dot.setAttribute('class', 'dot-voided');
+            } else {
+                lines.forEach(l => l.style.opacity = '1');
+                if(dot) dot.setAttribute('class', 'dot-active');
+            }
+        }
+
+        function runAnim() {
+            document.querySelectorAll('.demo-cell').forEach(c => {
+                c.style.opacity = '1';
+                c.querySelectorAll('line').forEach(l => {
+                    l.style.opacity = '1';
+                    if (l.getAttribute('class') === 'seg-invalid') {
+                        l.setAttribute('class', 'seg-on');
+                    }
+                });
+                const circle = c.querySelector('circle');
+                if(circle) circle.setAttribute('class', 'dot-active');
+            });
+            
+            document.querySelectorAll('.anno-text').forEach(el => el.style.display = 'none');
+            const anno1 = document.getElementById('anno-1');
+            if(anno1) anno1.style.display = 'block';
+
+            // SLOWED DOWN: Show first annotation for 5.5 seconds (was 3.5s)
+            setTimeout(() => {
+                setVoid(5, true); 
+                setWordOpacity(0, 4, '0.7'); 
+                setWordOpacity(6, 10, '1');  
+                
+                if(anno1) anno1.style.display = 'none';
+                const anno2 = document.getElementById('anno-2');
+                if(anno2) anno2.style.display = 'block';
+            }, 5500);
+
+            // SLOWED DOWN: Show second annotation up to 11.5 seconds (was 7.5s)
+            setTimeout(() => {
+                setVoid(5, false); 
+                setVoid(2, true);  
+                
+                setWordOpacity(0, 1, '0.7');  
+                setWordOpacity(3, 10, '0.7'); 
+                
+                const anno2 = document.getElementById('anno-2');
+                if(anno2) anno2.style.display = 'none';
+                const anno3 = document.getElementById('anno-3');
+                if(anno3) anno3.style.display = 'block';
+            }, 11500);
+
+            // SLOWED DOWN: Show third annotation up to 17 seconds (was 11s)
+            setTimeout(() => {
+                const cellO = document.getElementById('demo-cell-3');
+                if(cellO) {
+                    cellO.style.opacity = '1'; 
+                    const seg1 = document.getElementById('demo-seg-3-1');
+                    if(seg1) seg1.style.opacity = '0'; 
+                    cellO.querySelectorAll('.seg-on').forEach(el => el.setAttribute('class', 'seg-invalid'));
+                }
+            }, 17000);
+
+            // SLOWED DOWN: Show error fix up to 20 seconds (was 13s)
+            setTimeout(() => {
+                const cellO = document.getElementById('demo-cell-3');
+                const seg2 = document.getElementById('demo-seg-3-2');
+                if(seg2) seg2.style.opacity = '0'; 
+                if(cellO) cellO.querySelectorAll('.seg-invalid').forEach(el => el.setAttribute('class', 'seg-on'));
+                setWordOpacity(3, 10, '1'); 
+            }, 20000);
+        }
+
+        runAnim();
+        // SLOWED DOWN: Loop repeats every 24 seconds instead of 16 seconds
+        setInterval(runAnim, 24000); 
+
+        if (localStorage.getItem('fluorescent_welcomed') !== 'true') {
+            const modal = document.getElementById('welcome-modal');
+            if(modal) modal.style.display = 'flex';
+        }
+    })();
+</script>
 </body>
 </html>
