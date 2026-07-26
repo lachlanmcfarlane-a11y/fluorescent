@@ -47,6 +47,80 @@
         .header-panel div { display: flex; flex-direction: column; width: 33%; }
         .header-panel span { font-weight: bold; color: var(--accent); font-size: 1.4rem; margin-top: 2px;}
         .header-panel span.danger { color: var(--danger); }
+
+
+        /* WELCOME MODAL STYLES */
+        .welcome-overlay {
+            position: fixed;
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%;
+            background: rgba(2, 8, 4, 0.95);
+            z-index: 2000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+            backdrop-filter: blur(5px);
+        }
+        
+        .welcome-box {
+            background: var(--panel);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            padding: 25px;
+            max-width: 500px;
+            box-shadow: 0 0 30px rgba(85, 255, 204, 0.15);
+            text-align: left;
+            overflow-y: auto;
+            max-height: 90vh;
+        }
+
+        .welcome-title {
+            color: var(--accent);
+            font-size: 1.8rem;
+            text-align: center;
+            margin-bottom: 20px;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        .welcome-section {
+            margin-bottom: 25px;
+            background: #020804;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 3px solid var(--accent);
+        }
+
+        .welcome-section h4 {
+            color: #fff;
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+            letter-spacing: 1px;
+        }
+
+        .welcome-section p {
+            color: #a1a1aa;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 0;
+        }
+
+        .welcome-btn {
+            display: block;
+            margin: 0 auto;
+            background: var(--accent);
+            color: #000;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            box-shadow: 0 0 15px var(--accent-glow);
+            width: 100%;
+        }
+
         
         .word-container { 
             display: flex; 
@@ -236,6 +310,28 @@
 </style>
 </head>
 <body>
+    <!-- WELCOME MODAL -->
+    <div id="welcome-modal" class="welcome-overlay">
+        <div class="welcome-box">
+            <div class="welcome-title">WELCOME TO FLUORESCENT</div>
+            
+            <p style="text-align: center; margin-bottom: 20px; font-size: 1.05rem; color: #d4d4d8;">
+                Your objective is to carve valid words out of the daily 14-segment base word. Execute up to 5 banks to maximize your yield.
+            </p>
+
+            <div class="welcome-section">
+                <h4>MECHANIC 1: SPLICING</h4>
+                <p>Click individual line segments in the display to turn them ON or OFF. Every segment you change consumes <strong>1 splice</strong> from your daily budget of 10.</p>
+            </div>
+
+            <div class="welcome-section">
+                <h4>MECHANIC 2: VOIDING & SPACING</h4>
+                <p>Need a gap to separate words? Click the <strong>dot</strong> at the bottom right of any letter to completely void and dim it. This creates a space between words and does <em>not</em> cost any splices.</p>
+            </div>
+
+            <button class="btn-primary welcome-btn" onclick="dismissWelcome()">INITIALIZE SYSTEM</button>
+        </div>
+    </div>
 
     <div class="top-bar">
         <div class="history-container" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); z-index: 101;">
