@@ -49,90 +49,7 @@
         .header-panel span.danger { color: var(--danger); }
 
 
-        /* WELCOME MODAL STYLES */
-        .welcome-overlay {
-            position: fixed;
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%;
-            background: rgba(2, 8, 4, 0.95);
-            z-index: 2000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            box-sizing: border-box;
-            backdrop-filter: blur(5px);
-        }
         
-        .welcome-box {
-            background: var(--panel);
-            border: 1px solid var(--accent);
-            border-radius: 8px;
-            padding: 25px;
-            max-width: 500px;
-            box-shadow: 0 0 30px rgba(85, 255, 204, 0.15);
-            text-align: left;
-            overflow-y: auto;
-            max-height: 90vh;
-        }
-
-        .welcome-title {
-            color: var(--accent);
-            font-size: 1.8rem;
-            text-align: center;
-            margin-bottom: 20px;
-            letter-spacing: 2px;
-            text-shadow: 0 0 10px var(--accent-glow);
-        }
-
-        .welcome-section {
-            margin-bottom: 25px;
-            background: #020804;
-            padding: 15px;
-            border-radius: 6px;
-            border-left: 3px solid var(--accent);
-        }
-
-        .welcome-section h4 {
-            color: #fff;
-            margin-top: 0;
-            margin-bottom: 8px;
-            font-size: 1.1rem;
-            letter-spacing: 1px;
-        }
-
-        .welcome-section p {
-            color: #a1a1aa;
-            font-size: 0.95rem;
-            line-height: 1.5;
-            margin-bottom: 0;
-        }
-
-        .welcome-btn {
-            display: block;
-            margin: 0 auto;
-            background: var(--accent);
-            color: #000;
-            padding: 15px 30px;
-            font-size: 1.2rem;
-            box-shadow: 0 0 15px var(--accent-glow);
-            width: 100%;
-        }
-
-        
-        .word-container { 
-            display: flex; 
-            flex-wrap: wrap; 
-            justify-content: center; 
-            margin: 20px auto; 
-            background: #000; 
-            padding: 15px 5px; 
-            border-radius: 8px; 
-            border: 1px solid #0a1f10;
-            max-width: 100%; 
-        }
       
         
         .landscape-hint {
@@ -312,6 +229,7 @@
 <body>
    
 
+    
     <div class="top-bar">
         <div class="history-container" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); z-index: 101;">
             <button class="help-btn-icon" onclick="document.getElementById('history-modal').style.display = document.getElementById('history-modal').style.display === 'block' ? 'none' : 'block'">📊</button>
