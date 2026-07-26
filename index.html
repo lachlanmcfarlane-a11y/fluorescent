@@ -47,9 +47,18 @@
         .header-panel div { display: flex; flex-direction: column; width: 33%; }
         .header-panel span { font-weight: bold; color: var(--accent); font-size: 1.4rem; margin-top: 2px;}
         .header-panel span.danger { color: var(--danger); }
-
-
         
+        .word-container { 
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+            margin: 20px auto; 
+            background: #000; 
+            padding: 15px 5px; 
+            border-radius: 8px; 
+            border: 1px solid #0a1f10;
+            max-width: 100%; 
+        }
       
         
         .landscape-hint {
@@ -227,9 +236,7 @@
 </style>
 </head>
 <body>
-   
 
-    
     <div class="top-bar">
         <div class="history-container" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); z-index: 101;">
             <button class="help-btn-icon" onclick="document.getElementById('history-modal').style.display = document.getElementById('history-modal').style.display === 'block' ? 'none' : 'block'">📊</button>
