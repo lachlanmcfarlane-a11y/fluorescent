@@ -409,7 +409,6 @@
     <div class="gallery" id="gallery-container"></div>
 
     <script>
-        const START_DATE = new Date("2026-01-01T00:00:00Z").getTime();
         
         const DAILY_WORDS = [
             'BULLDOZER', 'EXPERIMENT', 'KALEIDOSCOPE', 'BASKETBALL', 'LIFESTYLE',
@@ -458,26 +457,33 @@
             'CLOCKWORK', 'INSURANCE', 'DETECTIVE', 'KEYBOARD', 'INCIDENT'
         ];
         
-        // Function to determine sector number strictly based on Australian Eastern Time (Sydney)
-function getAustralianSector(ms = Date.now()) {
-    const formatter = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'Australia/Sydney',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-    });
-    const todayStr = formatter.format(new Date(ms));
-    const startDate = new Date('2026-01-01T00:00:00Z');
-    const currentDate = new Date(`${todayStr}T00:00:00Z`);
-    return Math.floor((currentDate - startDate) / (1000 * 60 * 60 * 24));
+// 1. Set start date in local time (Jan 1, 2026)
+const START_DATE = new Date(2026, 0, 1);
+
+function getRealDaysPassed() {
+    const now = new Date();
+    // Compare local midnights so the game rolls over at local 00:00 AM
+    const localNow = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const localStart = new Date(START_DATE.getFullYear(), START_DATE.getMonth(), START_DATE.getDate()).getTime();
+    
+    // Math.round safely handles daylight saving time shifts (23 or 25-hour days)
+    return Math.round((localNow - localStart) / (1000 * 60 * 60 * 24));
 }
 
-let realDaysPassed = getAustralianSector();
-let daysPassed = localStorage.getItem('carver_dev_day') !== null ? parseInt(localStorage.getItem('carver_dev_day')) : realDaysPassed;
+let realDaysPassed = getRealDaysPassed();
 
-if (daysPassed > realDaysPassed) {
-    daysPassed = realDaysPassed;
-    localStorage.removeItem('carver_dev_day');
+// 2. Resolve Dev Mode override
+let devDayStored = localStorage.getItem('carver_dev_day');
+let daysPassed = realDaysPassed;
+
+if (devDayStored !== null) {
+    let parsedDevDay = parseInt(devDayStored, 10);
+    if (isNaN(parsedDevDay) || parsedDevDay <= realDaysPassed) {
+        localStorage.removeItem('carver_dev_day');
+        daysPassed = realDaysPassed;
+    } else {
+        daysPassed = parsedDevDay;
+    }
 }
 
 let todayDateStr = `Sector_${daysPassed}`;
