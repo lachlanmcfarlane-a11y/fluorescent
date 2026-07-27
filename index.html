@@ -514,9 +514,9 @@
 
        const MAPPING = {
             'A': [[1,1,1,0,1,1,1,1,0,0,0,0,0,0], [1,1,1,1,1,0,1,1,0,0,0,0,0,0]],
-            'B': [[1,1,1,1,0,0,0,1,0,1,0,0,1,0], [0,0,1,1,1,1,1,1,0,0,0,0,0,0], [0,0,1,1,1,1,1,0,0,0,0,0,0,0]], 
-            'C': [[1,0,0,1,1,1,0,0,0,0,0,0,0,0], [0,0,0,1,1,0,1,0,0,0,0,0,0,0]], 
-            'D': [[1,1,1,1,0,0,0,0,0,1,0,0,1,0], [0,1,1,1,1,0,1,1,0,0,0,0,0,0], [0,1,1,1,1,0,1,0,0,0,0,0,0,0]], 
+            'B': [[1,1,1,1,0,0,0,1,0,1,0,0,1,0], [0,0,1,1,1,1,1,1,0,0,0,0,0,0]], 
+            'C': [[1,0,0,1,1,1,0,0,0,0,0,0,0,0], [0,0,0,1,1,0,1,1,0,0,0,0,0,0]], 
+            'D': [[1,1,1,1,0,0,0,0,0,1,0,0,1,0], [0,1,1,1,1,0,1,1,0,0,0,0,0,0]], 
             'E': [[1,0,0,1,1,1,1,1,0,0,0,0,0,0], [1,1,0,1,1,1,1,1,0,0,0,0,0,0],[1,0,0,1,1,1,1,0,0,0,0,0,0,0]],
             'F': [[1,0,0,0,1,1,1,1,0,0,0,0,0,0], [1,0,0,0,1,1,1,0,0,0,0,0,0,0]],
             'G': [[1,0,1,1,1,1,0,1,0,0,0,0,0,0], [1,1,1,1,0,1,1,1,0,0,0,0,0,0]],
@@ -676,6 +676,7 @@
 
             if (usedWordsThisSession.length >= MAX_COMBOS) {
                 isGameLocked = true;
+                document.getElementById('submit-btn').disabled = true;
             }
 
             document.getElementById('global-score').innerText = globalScore;
@@ -900,8 +901,21 @@
         }
 
         function saveCombo() {
+            // --- STRICT FRONT-END ENFORCEMENT ---
+            // 1. Immediately block if already at or over limit
+            if (usedWordsThisSession.length >= MAX_COMBOS) {
+                isGameLocked = true;
+                document.getElementById('submit-btn').disabled = true;
+                return;
+            }
+            
             if (!canSubmit || isGameLocked) return;
             if (editsMade === 0 && hiddenLetterIndex === -1) return;
+            
+            // 2. ANTI-DOUBLE-CLICK: Disable the button the exact millisecond it is clicked
+            canSubmit = false;
+            document.getElementById('submit-btn').disabled = true;
+            // ------------------------------------
             
             let comboStr = bestValidWordsArr.join(' + ');
             let editsLeft = MAX_EDITS - editsMade;
@@ -970,6 +984,8 @@
             
             if (usedWordsThisSession.length >= MAX_COMBOS) {
                 isGameLocked = true;
+                // Double guarantee it stays disabled
+                document.getElementById('submit-btn').disabled = true;
                 alert("ALL 5 SECTORS COMPLETE. EXPORT YOUR LOG.");
             }
         
