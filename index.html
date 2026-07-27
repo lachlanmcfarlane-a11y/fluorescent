@@ -618,9 +618,10 @@
             
             let listHtml = keys.map(k => {
                 let entry = gameHistory[k];
+                let highestTrophy = entry.isHighest5of5 ? ' 🏆' : '';
                 return `<div style="border-left: 2px solid var(--accent); padding-left: 8px; margin-bottom: 10px;">
                     <strong>Sector #${k}</strong> <span style="color:#a1a1aa; font-size: 0.8em;">(${entry.baseWord || '?'})</span><br>
-                    Yield: <span style="color:var(--accent)">${entry.score}</span><br>
+                    Yield: <span style="color:var(--accent)">${entry.score}${highestTrophy}</span><br>
                     <span style="color:#71717a; font-size: 0.8em;">${entry.words.join(' + ')}</span>
                 </div>`;
             }).join('');
@@ -900,9 +901,8 @@
             }
         }
 
-        function saveCombo() {
+        async function saveCombo() {
             // --- STRICT FRONT-END ENFORCEMENT ---
-            // 1. Immediately block if already at or over limit
             if (usedWordsThisSession.length >= MAX_COMBOS) {
                 isGameLocked = true;
                 document.getElementById('submit-btn').disabled = true;
@@ -912,10 +912,9 @@
             if (!canSubmit || isGameLocked) return;
             if (editsMade === 0 && hiddenLetterIndex === -1) return;
             
-            // 2. ANTI-DOUBLE-CLICK: Disable the button the exact millisecond it is clicked
+            // Disable button immediately
             canSubmit = false;
             document.getElementById('submit-btn').disabled = true;
-            // ------------------------------------
             
             let comboStr = bestValidWordsArr.join(' + ');
             let editsLeft = MAX_EDITS - editsMade;
@@ -923,7 +922,8 @@
             let finalScore = Math.floor(moveBaseScore * multiplier);
             
             globalScore += finalScore;
-            usedWordsThisSession.push(comboStr);
+            
+            let rawComboWords = [...bestValidWordsArr];
             bestValidWordsArr.forEach(w => usedIndividualWords.add(w));
             
             let carvesPerLetter = [];
@@ -939,44 +939,110 @@
                 carvesPerLetter.push(getEmojiNum(diff));
             }
             carvesRecord.push(carvesPerLetter.join(''));
-            
-            let html = `<div class="gallery-item">
+
+            // DOM Element container for the newly banked item
+            let comboDomId = 'combo-' + Date.now();
+            let html = `<div class="gallery-item" id="${comboDomId}">
                 <div class="gallery-svgs">${currentState.map((state, idx) => getSVGHTML(state, idx, false)).join('')}</div>
                 <div class="gallery-info">
-                    <h3>${comboStr}</h3>
-                    <p>+${finalScore} PTS (Cost: ${editsMade})</p>
+                    <h3 class="combo-title">${comboStr}</h3>
+                    <p class="combo-score-p">+${finalScore} PTS (Cost: ${editsMade})</p>
                 </div>
             </div>`;
             document.getElementById('gallery-container').insertAdjacentHTML('afterbegin', html);
+
+            let sectorWordsDetails = rawComboWords.map(w => ({
+                word: w,
+                score: finalScore 
+            }));
+
+            // Track state before async response
+            usedWordsThisSession.push(comboStr);
 
             currentState = startingState.map(arr => [...arr]);
             hiddenLetterIndex = -1;
             recalculateEdits();
             
+            let maxWordLength = rawComboWords.reduce((max, word) => Math.max(max, word.length), 0);
+            
+            let gameHistory = JSON.parse(localStorage.getItem('carver_history')) || {};
+            let existingEntries = gameHistory[daysPassed]?.wordsPlayed || [];
+            let updatedWordsPlayedList = existingEntries.concat(sectorWordsDetails);
+
+            gameHistory[daysPassed] = { 
+                score: globalScore, 
+                words: usedWordsThisSession, 
+                baseWord: dailyWord,
+                wordsPlayed: updatedWordsPlayedList
+            };
+
+            // Send telemetry & calculate trophies
+            try {
+                const response = await fetch('https://fluorescent-api.lachlan-mcfarlane.workers.dev/api/log', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: userId,
+                        sector: daysPassed,
+                        score: finalScore,
+                        maxWordLength: maxWordLength,
+                        baseWord: dailyWord,
+                        wordsPlayed: sectorWordsDetails,
+                        syslogs: gameHistory,
+                        sectorTotalScore: globalScore,
+                        cumulativeWords: JSON.stringify(usedWordsThisSession)
+                    })
+                });
+
+                const resData = await response.json();
+
+                if (resData && resData.trophies) {
+                    let trophies = resData.trophies;
+                    let newSet = new Set((trophies.newWords || []).map(w => w.toUpperCase()));
+                    let highSet = new Set((trophies.highestScoreWords || []).map(w => w.toUpperCase()));
+
+                    // Decorate words with trophies
+                    let decoratedWords = rawComboWords.map(w => {
+                        let tag = '';
+                        if (newSet.has(w.toUpperCase())) tag += '🌟';
+                        if (highSet.has(w.toUpperCase())) tag += '👑';
+                        return tag ? `${w} ${tag}` : w;
+                    });
+
+                    let decoratedComboStr = decoratedWords.join(' + ');
+
+                    // Update local arrays
+                    usedWordsThisSession[usedWordsThisSession.length - 1] = decoratedComboStr;
+
+                    // Update DOM gallery item
+                    let domElem = document.getElementById(comboDomId);
+                    if (domElem) {
+                        let titleElem = domElem.querySelector('.combo-title');
+                        if (titleElem) titleElem.innerText = decoratedComboStr;
+
+                        if (trophies.isHighest5of5) {
+                            let pElem = domElem.querySelector('.combo-score-p');
+                            if (pElem) pElem.innerText += ' 🏆 (DAY BEST 5/5)';
+                        }
+                    }
+
+                    if (trophies.isHighest5of5) {
+                        gameHistory[daysPassed].isHighest5of5 = true;
+                    }
+                    gameHistory[daysPassed].words = usedWordsThisSession;
+                }
+
+            } catch (e) {
+                console.log("Telemetry transmission failed", e);
+            }
+
+            // Save state to localStorage
             localStorage.setItem('carver_daily_score', globalScore);
             localStorage.setItem('carver_used_combos', JSON.stringify(usedWordsThisSession));
             localStorage.setItem('carver_used_individual_words', JSON.stringify([...usedIndividualWords]));
             localStorage.setItem('carver_record', JSON.stringify(carvesRecord));
             localStorage.setItem('carver_board_state', JSON.stringify(currentState));
             localStorage.setItem('carver_hidden_index', hiddenLetterIndex);
-            
-            // Build an array of the words and their individual scores for this combo submission
-            let sectorWordsDetails = bestValidWordsArr.map(w => ({
-                word: w,
-                score: finalScore // or calculate individual word score if you prefer
-            }));
-
-            let gameHistory = JSON.parse(localStorage.getItem('carver_history')) || {};
-            
-            // If the sector already has entries, append to them; otherwise initialize
-            let existingEntries = gameHistory[daysPassed]?.wordsPlayed || [];
-            
-            gameHistory[daysPassed] = { 
-                score: globalScore, 
-                words: usedWordsThisSession, 
-                baseWord: dailyWord,
-                wordsPlayed: existingEntries.concat(sectorWordsDetails) // <-- Stores individual words & scores
-            };
             localStorage.setItem('carver_history', JSON.stringify(gameHistory));
             
             document.getElementById('global-score').innerText = globalScore;
@@ -984,30 +1050,10 @@
             
             if (usedWordsThisSession.length >= MAX_COMBOS) {
                 isGameLocked = true;
-                // Double guarantee it stays disabled
                 document.getElementById('submit-btn').disabled = true;
                 alert("ALL 5 SECTORS COMPLETE. EXPORT YOUR LOG.");
             }
-        
-            // 1. Calculate the longest word in the current bank
-            let maxWordLength = bestValidWordsArr.reduce((max, word) => Math.max(max, word.length), 0);
 
-           // Send payload to your Worker API
-        fetch('https://fluorescent-api.lachlan-mcfarlane.workers.dev/api/log', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                userId: userId,
-                sector: daysPassed,
-                score: finalScore,
-                maxWordLength: maxWordLength,
-                baseWord: dailyWord,
-                wordsPlayed: sectorWordsDetails,
-                syslogs: gameHistory,
-                sectorTotalScore: globalScore,                   // <-- NEW: The running total score
-                cumulativeWords: JSON.stringify(usedWordsThisSession) // <-- NEW: All words played so far
-            })
-        }).catch(e => console.log("Telemetry transmission failed"));
             updateStats();
             renderMainWord();
             updateHistoryUI();
@@ -1190,7 +1236,7 @@
             {x1:15, y1:10, x2:85, y2:10}, {x1:90, y1:15, x2:90, y2:65}, {x1:90, y1:75, x2:90, y2:125},
             {x1:15, y1:130, x2:85, y2:130}, {x1:10, y1:75, x2:10, y2:125}, {x1:10, y1:15, x2:10, y2:65},
             {x1:15, y1:70, x2:45, y2:70}, {x1:55, y1:70, x2:85, y2:70}, {x1:15, y1:15, x2:45, y2:65},
-            {x1:50, y1:15, x2:50, y2:65}, {x1:85, y1:15, x2:55, y2:65}, {x1:15, y1:125, x2:45, y2:75},
+            {x0:50, y1:15, x2:50, y2:65}, {x1:85, y1:15, x2:55, y2:65}, {x1:15, y1:125, x2:45, y2:75},
             {x1:50, y1:125, x2:50, y2:75}, {x1:85, y1:125, x2:55, y2:75}
         ];
 
@@ -1251,7 +1297,7 @@
             const anno1 = document.getElementById('anno-1');
             if(anno1) anno1.style.display = 'block';
 
-            // SLOWED DOWN: Show first annotation for 5.5 seconds (was 3.5s)
+            // SLOWED DOWN: Show first annotation for 5.5 seconds
             setTimeout(() => {
                 setVoid(5, true); 
                 setWordOpacity(0, 4, '0.7'); 
@@ -1262,7 +1308,7 @@
                 if(anno2) anno2.style.display = 'block';
             }, 5500);
 
-            // SLOWED DOWN: Show second annotation up to 11.5 seconds (was 7.5s)
+            // SLOWED DOWN: Show second annotation up to 11.5 seconds
             setTimeout(() => {
                 setVoid(5, false); 
                 setVoid(2, true);  
@@ -1276,7 +1322,7 @@
                 if(anno3) anno3.style.display = 'block';
             }, 11500);
 
-            // SLOWED DOWN: Show third annotation up to 17 seconds (was 11s)
+            // SLOWED DOWN: Show third annotation up to 17 seconds
             setTimeout(() => {
                 const cellO = document.getElementById('demo-cell-3');
                 if(cellO) {
@@ -1287,7 +1333,7 @@
                 }
             }, 17000);
 
-            // SLOWED DOWN: Show error fix up to 20 seconds (was 13s)
+            // SLOWED DOWN: Show error fix up to 20 seconds
             setTimeout(() => {
                 const cellO = document.getElementById('demo-cell-3');
                 const seg2 = document.getElementById('demo-seg-3-2');
@@ -1298,7 +1344,7 @@
         }
 
         runAnim();
-        // SLOWED DOWN: Loop repeats every 24 seconds instead of 16 seconds
+        // SLOWED DOWN: Loop repeats every 24 seconds
         setInterval(runAnim, 24000); 
 
         if (localStorage.getItem('fluorescent_welcomed') !== 'true') {
