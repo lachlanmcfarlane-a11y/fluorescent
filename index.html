@@ -992,21 +992,22 @@
             // 1. Calculate the longest word in the current bank
             let maxWordLength = bestValidWordsArr.reduce((max, word) => Math.max(max, word.length), 0);
 
-           // Send payload to your Worker API with baseWord and words_played at the root level
-            fetch('https://fluorescent-api.lachlan-mcfarlane.workers.dev/api/log', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userId: userId,
-                    sector: daysPassed,
-                    score: finalScore,
-                    maxWordLength: maxWordLength,
-                    baseWord: dailyWord, // <-- Top-level base word
-                    wordsPlayed: sectorWordsDetails,
-                    syslogs: gameHistory 
-                })
-            }).catch(e => console.log("Telemetry transmission failed"));
-            // ------------------------------------
+           // Send payload to your Worker API
+        fetch('https://fluorescent-api.lachlan-mcfarlane.workers.dev/api/log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: userId,
+                sector: daysPassed,
+                score: finalScore,
+                maxWordLength: maxWordLength,
+                baseWord: dailyWord,
+                wordsPlayed: sectorWordsDetails,
+                syslogs: gameHistory,
+                sectorTotalScore: globalScore,                   // <-- NEW: The running total score
+                cumulativeWords: JSON.stringify(usedWordsThisSession) // <-- NEW: All words played so far
+            })
+        }).catch(e => console.log("Telemetry transmission failed"));
             updateStats();
             renderMainWord();
             updateHistoryUI();
