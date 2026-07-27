@@ -458,16 +458,30 @@
             'CLOCKWORK', 'INSURANCE', 'DETECTIVE', 'KEYBOARD', 'INCIDENT'
         ];
         
-        let realDaysPassed = Math.floor((new Date().getTime() - START_DATE) / (1000 * 60 * 60 * 24));
-        let daysPassed = localStorage.getItem('carver_dev_day') !== null ? parseInt(localStorage.getItem('carver_dev_day')) : realDaysPassed;
-        
-        if (daysPassed > realDaysPassed) {
-            daysPassed = realDaysPassed;
-            localStorage.removeItem('carver_dev_day');
-        }
-        
-        let todayDateStr = `Sector_${daysPassed}`;
-        let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
+        // Function to determine sector number strictly based on Australian Eastern Time (Sydney)
+function getAustralianSector(ms = Date.now()) {
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Australia/Sydney',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    });
+    const todayStr = formatter.format(new Date(ms));
+    const startDate = new Date('2026-01-01T00:00:00Z');
+    const currentDate = new Date(`${todayStr}T00:00:00Z`);
+    return Math.floor((currentDate - startDate) / (1000 * 60 * 60 * 24));
+}
+
+let realDaysPassed = getAustralianSector();
+let daysPassed = localStorage.getItem('carver_dev_day') !== null ? parseInt(localStorage.getItem('carver_dev_day')) : realDaysPassed;
+
+if (daysPassed > realDaysPassed) {
+    daysPassed = realDaysPassed;
+    localStorage.removeItem('carver_dev_day');
+}
+
+let todayDateStr = `Sector_${daysPassed}`;
+let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
 
         document.getElementById('date-display').innerText = `SECTOR #${daysPassed} // BASE: ${dailyWord}`;
 
@@ -1092,11 +1106,12 @@
         }
         
         function devTimeTravel() {
-            let realDay = Math.floor((new Date().getTime() - START_DATE) / (1000 * 60 * 60 * 24));
-            let currentOverride = localStorage.getItem('carver_dev_day') !== null ? parseInt(localStorage.getItem('carver_dev_day')) : realDay;
-            
-            let targetDay = prompt(`SYS: REAL WORLD SECTOR IS ${realDay}.\nEnter a past sector number (0 to ${realDay}) to travel to:`, currentOverride);
-            
+    let realDay = getAustralianSector();
+    let currentOverride = localStorage.getItem('carver_dev_day') !== null ? parseInt(localStorage.getItem('carver_dev_day')) : realDay;
+    
+    let targetDay = prompt(`SYS: REAL WORLD SECTOR IS ${realDay}.\nEnter a past sector number (0 to ${realDay}) to travel to:`, currentOverride);
+    
+    
             if (targetDay === null || targetDay === "") return;
             targetDay = parseInt(targetDay);
             
