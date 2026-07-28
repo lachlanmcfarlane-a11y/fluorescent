@@ -1102,6 +1102,11 @@ function generateShareText() {
     text += `Total Score: ${globalScore}${isTopSectorScore ? ' 🏆' : ''}\n`;
     text += `Splices Executed: ${usedWordsThisSession.length}/5 \n\n`;
 
+    // Print the daily base word before the emojis
+    if (typeof dailyWord !== 'undefined') {
+        text += `${dailyWord.toUpperCase()}\n`;
+    }
+    
     // Loop through the session words
     for (let i = 0; i < usedWordsThisSession.length; i++) {
         let wordStr = usedWordsThisSession[i];
