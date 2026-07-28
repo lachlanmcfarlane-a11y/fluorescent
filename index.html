@@ -235,7 +235,7 @@
         .help-card-title { color: #fff; font-weight: bold; margin-bottom: 5px; font-size: 1.1rem;}
         .help-card-svgs { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;}
 
-</style>
+    </style>
 </head>
 <body>
 <!-- 1. ADD THIS BUTTON ANYWHERE IN YOUR HEADER/NAV -->
@@ -340,15 +340,12 @@
     </div>
 </div>
 
-
     <div class="top-bar">
         <div class="history-container" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); z-index: 101;">
             <button class="help-btn-icon" onclick="document.getElementById('history-modal').style.display = document.getElementById('history-modal').style.display === 'block' ? 'none' : 'block'">📊</button>
             <div id="history-modal" class="help-modal" style="left: 0; right: auto; text-align: left;">
             <div style="color:var(--accent); font-size:1.2rem; font-weight:bold; letter-spacing: 2px; text-align: center;">SYS LOGS</div>
             
-           
-        
             <div id="history-stats" style="margin: 15px 0; border-bottom: 1px dashed #143d20; padding-bottom: 10px;"></div>
             <div id="history-list" style="max-height: 300px; overflow-y: auto; font-size: 0.85rem; padding-right: 5px;"></div>
                  <!-- AWARDS LEGEND KEY -->
@@ -962,14 +959,18 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
             let carvesPerLetter = [];
             for (let i = 0; i < currentState.length; i++) {
                 if (i === hiddenLetterIndex) {
-                    carvesPerLetter.push('🔴'); 
+                    carvesPerLetter.push('🔴'); // Still add the voided dot
                     continue;
                 }
                 let diff = 0;
                 for (let j = 0; j < 14; j++) {
                     if (currentState[i][j] !== startingState[i][j]) diff++;
                 }
-                carvesPerLetter.push(getEmojiNum(diff));
+                
+                // ONLY add the emoji if actual splices were made (greater than 0)
+                if (diff > 0) {
+                    carvesPerLetter.push(getEmojiNum(diff));
+                }
             }
             carvesRecord.push(carvesPerLetter.join(''));
 
@@ -1091,33 +1092,56 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
             renderMainWord();
             updateHistoryUI();
         }
+function generateShareText() {
+    // Check if they achieved a top sector score for the day
+    const history = JSON.parse(localStorage.getItem('carver_history')) || {};
+    const isTopSectorScore = history[daysPassed]?.isHighest5of5 || false;
 
-        function shareScore() {
-            let text = `FLUORESCENT Sector #${daysPassed} 🪚\n`;
-            text += `Total Score: ${globalScore} 🏆\n`;
-            text += `Splices Executed: ${usedWordsThisSession.length}/${MAX_COMBOS} ✨\n\n`;
-            text += `${dailyWord}\n`;
-            
-            carvesRecord.forEach(record => {
-                text += `${record}\n`;
-            });
-            
-            text += `\nPlay at: http://playfluorescent.com`;
+    // Header
+    let text = `FLUORESCENT Sector #${daysPassed} \n`;
+    text += `Total Score: ${globalScore}${isTopSectorScore ? ' 🏆' : ''}\n`;
+    text += `Splices Executed: ${usedWordsThisSession.length}/5 \n\n`;
 
-            navigator.clipboard.writeText(text).then(() => {
-                alert("Log copied to clipboard. Ready to transmit.");
-            }).catch(err => {
-                prompt("Copy this text to share:", text);
-            });
-        }
+    // Loop through the session words
+    for (let i = 0; i < usedWordsThisSession.length; i++) {
+        let wordStr = usedWordsThisSession[i];
+        let emojiRow = carvesRecord[i] || "";
+        
+        // Extract only the trophies from the stored word string
+        let trophies = "";
+        if (wordStr.includes('🌟')) trophies += ' 🌟';
+        if (wordStr.includes('👑')) trophies += ' 👑';
+        
+        // Combine the splice emojis with the trophies
+        let finalLine = emojiRow + trophies;
+        
+        text += finalLine.trim() + '\n';
+    }
+
+    // Footer
+    text += `\nPlay at: http://playfluorescent.com`;
+    return text.trim();
+}
+
+function shareScore() {
+    const shareText = generateShareText();
+    copyToClipboard(shareText);
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        alert('Log copied to clipboard! 🔗');
+    }).catch(() => {
+        console.error('Clipboard copy failed');
+    });
+}
         
         function devTimeTravel() {
-    let realDay = getAustralianSector();
-    let currentOverride = localStorage.getItem('carver_dev_day') !== null ? parseInt(localStorage.getItem('carver_dev_day')) : realDay;
-    
-    let targetDay = prompt(`SYS: REAL WORLD SECTOR IS ${realDay}.\nEnter a past sector number (0 to ${realDay}) to travel to:`, currentOverride);
-    
-    
+            let realDay = getRealDaysPassed(); // FIX: Used correct function name here
+            let currentOverride = localStorage.getItem('carver_dev_day') !== null ? parseInt(localStorage.getItem('carver_dev_day')) : realDay;
+            
+            let targetDay = prompt(`SYS: REAL WORLD SECTOR IS ${realDay}.\nEnter a past sector number (0 to ${realDay}) to travel to:`, currentOverride);
+            
             if (targetDay === null || targetDay === "") return;
             targetDay = parseInt(targetDay);
             
@@ -1270,7 +1294,7 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
             {x1:15, y1:10, x2:85, y2:10}, {x1:90, y1:15, x2:90, y2:65}, {x1:90, y1:75, x2:90, y2:125},
             {x1:15, y1:130, x2:85, y2:130}, {x1:10, y1:75, x2:10, y2:125}, {x1:10, y1:15, x2:10, y2:65},
             {x1:15, y1:70, x2:45, y2:70}, {x1:55, y1:70, x2:85, y2:70}, {x1:15, y1:15, x2:45, y2:65},
-            {x0:50, y1:15, x2:50, y2:65}, {x1:85, y1:15, x2:55, y2:65}, {x1:15, y1:125, x2:45, y2:75},
+            {x1:50, y1:15, x2:50, y2:65}, {x1:85, y1:15, x2:55, y2:65}, {x1:15, y1:125, x2:45, y2:75}, // FIX: Changed x0:50 to x1:50
             {x1:50, y1:125, x2:50, y2:75}, {x1:85, y1:125, x2:55, y2:75}
         ];
 
