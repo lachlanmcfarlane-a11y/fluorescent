@@ -253,6 +253,7 @@
         background: #020804; border: 1px solid var(--accent); border-radius: 8px;
         padding: 30px 20px; max-width: 600px; width: 100%;
         box-shadow: 0 0 40px rgba(85, 255, 204, 0.15); text-align: center;
+        touch-action: pan-y; /* Allow vertical scrolling, handle horizontal swipes in JS */
     }
     .welcome-title {
         color: var(--accent); font-size: 1.6rem; margin-bottom: 25px;
@@ -284,12 +285,19 @@
     }
 
     /* Annotation Text */
-    .anno-container { position: relative; height: 85px; margin-bottom: 20px; }
+    .anno-container { position: relative; height: 110px; margin-bottom: 20px; }
     .anno-text {
         position: absolute; width: 100%; color: #d4d4d8;
         font-size: 0.95rem; line-height: 1.5; display: none;
+        animation: fadeIn 0.3s ease-in-out;
     }
+    .anno-text.active { display: block; }
     .anno-highlight { color: var(--accent); font-weight: bold; display: block; margin-bottom: 5px; }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(5px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
     
     /* Buttons */
     .how-to-btn {
@@ -300,13 +308,34 @@
     }
     .how-to-btn:hover { background: rgba(85, 255, 204, 0.15); }
     
+    .modal-nav {
+        display: flex; gap: 10px; justify-content: center;
+    }
+    
     .welcome-btn {
-        background: var(--accent); color: #000; border: none; padding: 15px 30px;
+        background: var(--accent); color: #000; border: none; padding: 15px 20px;
         font-size: 1.1rem; font-weight: bold; cursor: pointer; width: 100%;
         border-radius: 4px; text-transform: uppercase; letter-spacing: 2px;
         box-shadow: 0 0 10px var(--accent-glow);
     }
     .welcome-btn:hover { transform: scale(0.98); }
+    
+    .btn-nav {
+        background: transparent; border: 1px solid var(--accent); color: var(--accent);
+        box-shadow: none;
+    }
+    .btn-nav:hover { background: rgba(85, 255, 204, 0.1); }
+    
+    .swipe-hint {
+        font-size: 0.75rem; color: #71717a; margin-top: 15px; letter-spacing: 1px;
+    }
+    .swipe-dots {
+        display: flex; justify-content: center; gap: 8px; margin-bottom: 15px;
+    }
+    .swipe-dot {
+        width: 8px; height: 8px; border-radius: 50%; background: #1a2a22; transition: background 0.3s;
+    }
+    .swipe-dot.active { background: var(--accent); box-shadow: 0 0 5px var(--accent-glow); }
 
     @media (max-width: 550px) {
         .anno-text { font-size: 0.85rem; }
@@ -314,29 +343,38 @@
 </style>
 
 <div id="welcome-modal">
-    <div class="welcome-box">
+    <div class="welcome-box" id="welcome-box">
         <div class="welcome-title">HOW TO PLAY</div>
         
         <div class="demo-board" id="demo-board"></div>
 
-           <div class="anno-container">
-            <div class="anno-text" id="anno-1">
+        <div class="swipe-dots">
+            <div class="swipe-dot active" id="dot-0"></div>
+            <div class="swipe-dot" id="dot-1"></div>
+            <div class="swipe-dot" id="dot-2"></div>
+        </div>
+
+        <div class="anno-container">
+            <div class="anno-text active" id="anno-0">
                 <span class="anno-highlight">1. THE BASE WORD</span>
-                Your objective is to find and bank valid words out of the daily 14-segment vacuum fluorescent display sequence.
+                Your objective is to find and bank valid words hidden within the daily 14-segment vacuum fluorescent display sequence.
+            </div>
+            <div class="anno-text" id="anno-1">
+                <span class="anno-highlight">2. VOIDING (CREATING A SPACE)</span>
+                Click the circular dot below a letter to dim it entirely. This splits the sequence into separate words and costs 0 segment splices.
             </div>
             <div class="anno-text" id="anno-2">
-                <span class="anno-highlight">2. VOIDING (CREATING A SPACE)</span>
-                Click a dot to dim <strong>one letter</strong> entirely. This creates a space and costs 0 segment splices.
-            </div>
-            <div class="anno-text" id="anno-3">
                 <span class="anno-highlight">3. SEGMENT SPLICING</span>
-                Toggle segments to morph invalid words into valid ones. Up to 10 segment splices can be made. On mobile you can pinch-to-zoom if it is hard to splice the right segment.
+                Toggle individual segments on/off to morph invalid shapes into valid letters. You can make up to 10 segment splices per move. On mobile, pinch-to-zoom if it's hard to hit the right segment.
             </div>
         </div>
 
-        <button class="welcome-btn" onclick="document.getElementById('welcome-modal').style.display='none'; localStorage.setItem('fluorescent_welcomed', 'true');">
-            INITIALIZE SYSTEM
-        </button>
+        <div class="modal-nav">
+            <button class="welcome-btn btn-nav" id="prev-btn" onclick="prevSlide()" style="display:none;">&#8592; PREV</button>
+            <button class="welcome-btn btn-nav" id="next-btn" onclick="nextSlide()">NEXT &#8594;</button>
+            <button class="welcome-btn" id="start-btn" onclick="closeModal()" style="display:none;">INITIALIZE SYSTEM</button>
+        </div>
+        <div class="swipe-hint">Swipe left/right to navigate</div>
     </div>
 </div>
 
@@ -408,73 +446,72 @@
     <script>
         
         const ORIGINAL_WORDS = [
-    'BULLDOZER', 'EXPERIMENT', 'KALEIDOSCOPE', 'BASKETBALL', 'LIFESTYLE',
-    'EXHIBITION', 'CONNECTION', 'DICTIONARY', 'DOMINANCE', 'INFLUENCE',
-    'MICROWAVE', 'APARTMENT', 'GIGANTIC', 'MAGNIFICENT', 'AMBULANCE',
-    'HIGHLIGHT', 'FURNITURE', 'CORPORATE', 'YESTERDAY', 'DINOSAUR',
-    'LEADERSHIP', 'COMPANION', 'INDEPENDENT', 'MACADAMIA', 'GEOGRAPHY',
-    'CONSONANT', 'BLACKSMITH', 'ASTRONAUT', 'ESSENTIAL', 'REVOLUTION',
-    'CIGARETTE', 'BEHAVIOUR', 'MAGNETIC', 'DIRECTION', 'ALGORITHM',
-    'EXPENSIVE', 'BARTENDER', 'CANDIDATE', 'DOCUMENT', 'LITERATURE',
-    'METEORITE', 'HOLOGRAPH', 'WONDERFUL', 'MINIATURE', 'GRANDMOTHER',
-    'PNEUMATIC', 'CATASTROPHE', 'BROADCAST', 'INSPECTOR', 'EMPLOYEE',
-    'CHANDELIER', 'AMBASSADOR', 'DANGEROUS', 'HONEYCOMB', 'INITIATIVE',
-    'BOULEVARD', 'COMPROMISE', 'KNOWLEDGE', 'DEPENDENT', 'LUMBERJACK',
-    'INVESTMENT', 'FOOTBALL', 'CELEBRATE', 'ABUNDANCE', 'ILLUSTRATE',
-    'MECHANICAL', 'DISCOVERY', 'BATTLESHIP', 'CAMPGROUND', 'FASCINATE',
-    'ECONOMICS', 'AERODYNAMIC', 'EFFECTIVE', 'GRASSHOPPER', 'COURAGEOUS',
-    'MARMALADE', 'ELEVATOR', 'GRANDFATHER', 'ENTHUSIASM', 'CHAMPION',
-    'INNOVATION', 'MILLENNIUM', 'DEFENDANT', 'APPARATUS', 'DISASTER',
-    'LANDSCAPE', 'BACKGROUND', 'ALBATROSS', 'IMPORTANT', 'DEVELOPER',
-    'CONFERENCE', 'GENERATION', 'TECHNOLOGY', 'HYDRAULIC', 'MARSHMALLOW',
-    'CARPENTER', 'ANONYMOUS', 'EVIDENCE', 'FINGERPRINT', 'EXECUTIVE',
-    'HYPOTHESIS', 'CROCODILE', 'JACKRABBIT', 'FRANCHISE', 'INGREDIENT',
-    'ISOLATION', 'CHAMELEON', 'EMOTIONAL', 'DIRECTOR', 'STRAWBERRY',
-    'CARDBOARD', 'ELECTRIC', 'MAINTENANCE', 'HELICOPTER', 'METABOLISM',
-    'BARRICADE', 'WATERMELON', 'CONSTRUCT', 'MEDICATION', 'ENVIRONMENT',
-    'GENTLEMAN', 'AMPLIFIER', 'GOVERNMENT', 'ESTABLISH', 'EXTENSION',
-    'CAMOUFLAGE', 'APOCALYPSE', 'EXPANSION', 'MARGARINE', 'BUTTERFLY',
-    'CONFIDENCE', 'MILLIONAIRE', 'ZEPPELIN', 'LEGITIMATE', 'JOURNALIST',
-    'CALCULATOR', 'EARTHQUAKE', 'KANGAROO', 'EXPLOSION', 'CONDUCTOR',
-    'JELLYFISH', 'ATMOSPHERE', 'COMMUNITY', 'ARCHITECT', 'LIVESTOCK',
-    'MANIPULATE', 'HOSPITAL', 'DISAPPEAR', 'EXPERIENCE', 'GREENHOUSE',
-    'COORDINATE', 'CYBERNETIC', 'BLUEBERRY', 'MANAGEMENT', 'INCOGNITO',
-    'DEMOCRACY', 'HANDSHAKE', 'GUARANTEE', 'EXCELLENT', 'MONUMENT',
-    'CORRUPTION', 'CHOCOLATE', 'COGNITIVE', 'HAMBURGER', 'DEPARTMENT',
-    'CHARACTER', 'LEGISLATION', 'COLLECTION', 'MACHINERY', 'MOTORCYCLE',
-    'LANGUAGE', 'MATHEMATICS', 'GUIDELINES', 'BLACKBERRY', 'INVISIBLE',
-    'CRIMINAL', 'ENCOURAGE', 'MAGAZINE', 'BRILLIANT', 'CARTRIDGE',
-    'COMPLICATE', 'ARMADILLO', 'ENERGETIC', 'ICEBREAKER', 'MELANCHOLY',
-    'BACKPACKER', 'ENDURANCE', 'HURRICANE', 'ENTERTAIN', 'INSTRUMENT',
-    'CONTINENT', 'EMERGENCY', 'BILLIONAIRE', 'FORMATION', 'INTELLIGENCE',
-    'AVALANCHE', 'CLASSROOM', 'FIREPLACE', 'ANTARCTICA', 'INTERVIEW',
-    'FLAMINGO', 'MICROPHONE', 'FOUNDATION', 'DESPERATE', 'COSMETICS',
-    'GLADIATOR', 'EQUIPMENT', 'IMPROVEMENT', 'CONTRACTOR', 'COPYRIGHT',
-    'IGNORANCE', 'MANHATTAN', 'IMPRESSION', 'EDUCATION', 'INCENTIVE',
-    'CLOCKWORK', 'INSURANCE', 'DETECTIVE', 'KEYBOARD', 'INCIDENT'
-];
+            'BULLDOZER', 'EXPERIMENT', 'KALEIDOSCOPE', 'BASKETBALL', 'LIFESTYLE',
+            'EXHIBITION', 'CONNECTION', 'DICTIONARY', 'DOMINANCE', 'INFLUENCE',
+            'MICROWAVE', 'APARTMENT', 'GIGANTIC', 'MAGNIFICENT', 'AMBULANCE',
+            'HIGHLIGHT', 'FURNITURE', 'CORPORATE', 'YESTERDAY', 'DINOSAUR',
+            'LEADERSHIP', 'COMPANION', 'INDEPENDENT', 'MACADAMIA', 'GEOGRAPHY',
+            'CONSONANT', 'BLACKSMITH', 'ASTRONAUT', 'ESSENTIAL', 'REVOLUTION',
+            'CIGARETTE', 'BEHAVIOUR', 'MAGNETIC', 'DIRECTION', 'ALGORITHM',
+            'EXPENSIVE', 'BARTENDER', 'CANDIDATE', 'DOCUMENT', 'LITERATURE',
+            'METEORITE', 'HOLOGRAPH', 'WONDERFUL', 'MINIATURE', 'GRANDMOTHER',
+            'PNEUMATIC', 'CATASTROPHE', 'BROADCAST', 'INSPECTOR', 'EMPLOYEE',
+            'CHANDELIER', 'AMBASSADOR', 'DANGEROUS', 'HONEYCOMB', 'INITIATIVE',
+            'BOULEVARD', 'COMPROMISE', 'KNOWLEDGE', 'DEPENDENT', 'LUMBERJACK',
+            'INVESTMENT', 'FOOTBALL', 'CELEBRATE', 'ABUNDANCE', 'ILLUSTRATE',
+            'MECHANICAL', 'DISCOVERY', 'BATTLESHIP', 'CAMPGROUND', 'FASCINATE',
+            'ECONOMICS', 'AERODYNAMIC', 'EFFECTIVE', 'GRASSHOPPER', 'COURAGEOUS',
+            'MARMALADE', 'ELEVATOR', 'GRANDFATHER', 'ENTHUSIASM', 'CHAMPION',
+            'INNOVATION', 'MILLENNIUM', 'DEFENDANT', 'APPARATUS', 'DISASTER',
+            'LANDSCAPE', 'BACKGROUND', 'ALBATROSS', 'IMPORTANT', 'DEVELOPER',
+            'CONFERENCE', 'GENERATION', 'TECHNOLOGY', 'HYDRAULIC', 'MARSHMALLOW',
+            'CARPENTER', 'ANONYMOUS', 'EVIDENCE', 'FINGERPRINT', 'EXECUTIVE',
+            'HYPOTHESIS', 'CROCODILE', 'JACKRABBIT', 'FRANCHISE', 'INGREDIENT',
+            'ISOLATION', 'CHAMELEON', 'EMOTIONAL', 'DIRECTOR', 'STRAWBERRY',
+            'CARDBOARD', 'ELECTRIC', 'MAINTENANCE', 'HELICOPTER', 'METABOLISM',
+            'BARRICADE', 'WATERMELON', 'CONSTRUCT', 'MEDICATION', 'ENVIRONMENT',
+            'GENTLEMAN', 'AMPLIFIER', 'GOVERNMENT', 'ESTABLISH', 'EXTENSION',
+            'CAMOUFLAGE', 'APOCALYPSE', 'EXPANSION', 'MARGARINE', 'BUTTERFLY',
+            'CONFIDENCE', 'MILLIONAIRE', 'ZEPPELIN', 'LEGITIMATE', 'JOURNALIST',
+            'CALCULATOR', 'EARTHQUAKE', 'KANGAROO', 'EXPLOSION', 'CONDUCTOR',
+            'JELLYFISH', 'ATMOSPHERE', 'COMMUNITY', 'ARCHITECT', 'LIVESTOCK',
+            'MANIPULATE', 'HOSPITAL', 'DISAPPEAR', 'EXPERIENCE', 'GREENHOUSE',
+            'COORDINATE', 'CYBERNETIC', 'BLUEBERRY', 'MANAGEMENT', 'INCOGNITO',
+            'DEMOCRACY', 'HANDSHAKE', 'GUARANTEE', 'EXCELLENT', 'MONUMENT',
+            'CORRUPTION', 'CHOCOLATE', 'COGNITIVE', 'HAMBURGER', 'DEPARTMENT',
+            'CHARACTER', 'LEGISLATION', 'COLLECTION', 'MACHINERY', 'MOTORCYCLE',
+            'LANGUAGE', 'MATHEMATICS', 'GUIDELINES', 'BLACKBERRY', 'INVISIBLE',
+            'CRIMINAL', 'ENCOURAGE', 'MAGAZINE', 'BRILLIANT', 'CARTRIDGE',
+            'COMPLICATE', 'ARMADILLO', 'ENERGETIC', 'ICEBREAKER', 'MELANCHOLY',
+            'BACKPACKER', 'ENDURANCE', 'HURRICANE', 'ENTERTAIN', 'INSTRUMENT',
+            'CONTINENT', 'EMERGENCY', 'BILLIONAIRE', 'FORMATION', 'INTELLIGENCE',
+            'AVALANCHE', 'CLASSROOM', 'FIREPLACE', 'ANTARCTICA', 'INTERVIEW',
+            'FLAMINGO', 'MICROPHONE', 'FOUNDATION', 'DESPERATE', 'COSMETICS',
+            'GLADIATOR', 'EQUIPMENT', 'IMPROVEMENT', 'CONTRACTOR', 'COPYRIGHT',
+            'IGNORANCE', 'MANHATTAN', 'IMPRESSION', 'EDUCATION', 'INCENTIVE',
+            'CLOCKWORK', 'INSURANCE', 'DETECTIVE', 'KEYBOARD', 'INCIDENT'
+        ];
 
-// Unroll the list to safely bridge the past looping math, then append new words.
-const DAILY_WORDS = [
-    ...ORIGINAL_WORDS, 
-    ...ORIGINAL_WORDS, 
-    // NEW WORDS BEGIN HERE (Sector 280 onwards)
-    'SYNDICATE', 'OSCILLATION', 'CHEMISTRY', 'ECOSYSTEM', 'PARALLEL',
-    'TELESCOPE', 'AQUARIUM', 'INFRASTRUCTURE', 'THERMOMETER', 'VANDERBILT',
-    'RESONANCE', 'METALLURGY', 'MACROSCOPIC', 'SATELLITE', 'ZIGZAGGING',
-    'THERMODYNAMICS', 'CONSTELLATION', 'EXTRATERRESTRIAL', 'PARTICLE', 'CYBERSPACE',
-    'CHRONOLOGICAL', 'PLANETARY', 'PALEONTOLOGY', 'DIAGNOSTIC', 'TEMPERATURE',
-    'ROBOTICS', 'VOLCANIC', 'WILDERNESS', 'MATHEMATICAL', 'PROBABILITY',
-    'PHARMACY', 'PERSPECTIVE', 'HEMISPHERE', 'SEISMOLOGY', 'OBSERVATORY',
-    'LUMINESCENCE', 'VIBRATION', 'TRANSMISSION', 'STRATOSPHERE', 'GEOMETRY',
-    'ASTRONOMY', 'ILLUMINATION', 'SYMMETRY', 'CHAMPIONSHIP', 'PHOTOGRAPHY',
-    'PERFORMANCE', 'KINETIC', 'MOLECULAR', 'TOPOGRAPHY', 'THERMOSTAT',
-    'VELOCITY', 'FREQUENCIES', 'PRESCRIBE', 'SIMULATION', 'SEMICONDUCTOR',
-    'LABORATORY', 'RADIATION', 'SPECTACULAR', 'PHENOMENON', 'BIODIVERSITY',
-    'PHILOSOPHY', 'QUADRANT', 'NANOTECHNOLOGY', 'MOTORCADE', 'PARABOLA',
-    'RADIOACTIVE', 'INTERSTELLAR', 'QUANTUM', 'ULTRAVIOLET', 'TRAJECTORY',
-    'SYNTHETIC', 'MICROBIOLOGY', 'ELECTROMAGNETIC', 'FLUORESCENT', 'PHOTOSYNTHESIS'
-];
+        const DAILY_WORDS = [
+            ...ORIGINAL_WORDS, 
+            ...ORIGINAL_WORDS, 
+            // NEW WORDS BEGIN HERE (Sector 280 onwards)
+            'SYNDICATE', 'OSCILLATION', 'CHEMISTRY', 'ECOSYSTEM', 'PARALLEL',
+            'TELESCOPE', 'AQUARIUM', 'INFRASTRUCTURE', 'THERMOMETER', 'VANDERBILT',
+            'RESONANCE', 'METALLURGY', 'MACROSCOPIC', 'SATELLITE', 'ZIGZAGGING',
+            'THERMODYNAMICS', 'CONSTELLATION', 'EXTRATERRESTRIAL', 'PARTICLE', 'CYBERSPACE',
+            'CHRONOLOGICAL', 'PLANETARY', 'PALEONTOLOGY', 'DIAGNOSTIC', 'TEMPERATURE',
+            'ROBOTICS', 'VOLCANIC', 'WILDERNESS', 'MATHEMATICAL', 'PROBABILITY',
+            'PHARMACY', 'PERSPECTIVE', 'HEMISPHERE', 'SEISMOLOGY', 'OBSERVATORY',
+            'LUMINESCENCE', 'VIBRATION', 'TRANSMISSION', 'STRATOSPHERE', 'GEOMETRY',
+            'ASTRONOMY', 'ILLUMINATION', 'SYMMETRY', 'CHAMPIONSHIP', 'PHOTOGRAPHY',
+            'PERFORMANCE', 'KINETIC', 'MOLECULAR', 'TOPOGRAPHY', 'THERMOSTAT',
+            'VELOCITY', 'FREQUENCIES', 'PRESCRIBE', 'SIMULATION', 'SEMICONDUCTOR',
+            'LABORATORY', 'RADIATION', 'SPECTACULAR', 'PHENOMENON', 'BIODIVERSITY',
+            'PHILOSOPHY', 'QUADRANT', 'NANOTECHNOLOGY', 'MOTORCADE', 'PARABOLA',
+            'RADIOACTIVE', 'INTERSTELLAR', 'QUANTUM', 'ULTRAVIOLET', 'TRAJECTORY',
+            'SYNTHETIC', 'MICROBIOLOGY', 'ELECTROMAGNETIC', 'FLUORESCENT', 'PHOTOSYNTHESIS'
+        ];
         
 // 1. Set start date in local time (Jan 1, 2026)
 const START_DATE = new Date(2026, 0, 1);
@@ -1290,22 +1327,12 @@ function copyToClipboard(text) {
     
 <script>
    (function initDemo() {
-        // Fallback or explicit character segment mapping for a 14-segment display
         const FALLBACK_MAPPING = {
-            'F': [[0, 4, 5, 6, 9]],
-            'L': [[4, 3]],
-            'U': [[1, 2, 3, 4, 5]],
-            'O': [[0, 1, 2, 3, 4, 5]],
-            'R': [[0, 4, 5, 6, 9, 13]],
-            'E': [[0, 3, 4, 5, 6]],
-            'S': [[0, 2, 3, 5, 6, 7]],
-            'C': [[0, 3, 4, 5]],
-            'N': [[1, 2, 4, 5, 8, 10]],
-            'T': [[0, 9]]
+            'F': [[0, 4, 5, 6, 9]], 'L': [[4, 3]], 'U': [[1, 2, 3, 4, 5]], 
+            'O': [[0, 1, 2, 3, 4, 5]], 'R': [[0, 4, 5, 6, 9, 13]], 'E': [[0, 3, 4, 5, 6]], 
+            'S': [[0, 2, 3, 5, 6, 7]], 'C': [[0, 3, 4, 5]], 'N': [[1, 2, 4, 5, 8, 10]], 'T': [[0, 9]]
         };
-
         const activeMapping = (typeof MAPPING !== 'undefined') ? MAPPING : FALLBACK_MAPPING;
-
         const charMap = {
             'F': activeMapping['F'] ? activeMapping['F'][0] : [],
             'L': activeMapping['L'] ? activeMapping['L'][0] : [],
@@ -1318,12 +1345,11 @@ function copyToClipboard(text) {
             'N': activeMapping['N'] ? activeMapping['N'][0] : [],
             'T': activeMapping['T'] ? activeMapping['T'][0] : []
         };
-        
         const SEG_LINES = [
             {x1:15, y1:10, x2:85, y2:10}, {x1:90, y1:15, x2:90, y2:65}, {x1:90, y1:75, x2:90, y2:125},
             {x1:15, y1:130, x2:85, y2:130}, {x1:10, y1:75, x2:10, y2:125}, {x1:10, y1:15, x2:10, y2:65},
             {x1:15, y1:70, x2:45, y2:70}, {x1:55, y1:70, x2:85, y2:70}, {x1:15, y1:15, x2:45, y2:65},
-            {x1:50, y1:15, x2:50, y2:65}, {x1:85, y1:15, x2:55, y2:65}, {x1:15, y1:125, x2:45, y2:75}, // FIX: Changed x0:50 to x1:50
+            {x1:50, y1:15, x2:50, y2:65}, {x1:85, y1:15, x2:55, y2:65}, {x1:15, y1:125, x2:45, y2:75}, 
             {x1:50, y1:125, x2:50, y2:75}, {x1:85, y1:125, x2:55, y2:75}
         ];
 
@@ -1337,7 +1363,6 @@ function copyToClipboard(text) {
             for(let i=0; i<14; i++) {
                 let isOn = activeSegments.length === 14 ? activeSegments[i] : activeSegments.includes(i);
                 let classStr = isOn ? 'seg-on' : 'seg-off';
-                
                 svg += `<line id="demo-seg-${idx}-${i}" x1="${SEG_LINES[i].x1}" y1="${SEG_LINES[i].y1}" x2="${SEG_LINES[i].x2}" y2="${SEG_LINES[i].y2}" class="${classStr}"></line>`;
             }
             svg += `<circle id="demo-dot-${idx}" cx="90" cy="132" r="7" class="dot-active"></circle>`;
@@ -1345,15 +1370,18 @@ function copyToClipboard(text) {
             html += `<div class="demo-cell" id="demo-cell-${idx}">${svg}</div>`;
         });
         board.innerHTML = html;
+        
+        window.currentSlideStep = 0;
+        const totalSteps = 3;
 
-        function setWordOpacity(start, end, op) {
+        window.setWordOpacity = function(start, end, op) {
             for(let i=start; i<=end; i++) {
                 const cell = document.getElementById(`demo-cell-${i}`);
                 if(cell) cell.style.opacity = op;
             }
         }
 
-        function setVoid(idx, isVoid) {
+        window.setVoid = function(idx, isVoid) {
             const cell = document.getElementById(`demo-cell-${idx}`);
             if (!cell) return;
             const dot = document.getElementById(`demo-dot-${idx}`);
@@ -1362,77 +1390,110 @@ function copyToClipboard(text) {
                 lines.forEach(l => l.style.opacity = '0');
                 if(dot) dot.setAttribute('class', 'dot-voided');
             } else {
-                lines.forEach(l => l.style.opacity = '1');
+                lines.forEach(l => {
+                    // Reset opacity, keep off-segments off
+                    l.style.opacity = '1';
+                });
                 if(dot) dot.setAttribute('class', 'dot-active');
             }
         }
 
-        function runAnim() {
+        window.updateSlideView = function() {
+            // Update dots
+            document.querySelectorAll('.swipe-dot').forEach((d, i) => {
+                d.className = i === currentSlideStep ? 'swipe-dot active' : 'swipe-dot';
+            });
+            
+            // Update annotations
+            document.querySelectorAll('.anno-text').forEach(el => el.classList.remove('active'));
+            const currentAnno = document.getElementById(`anno-${currentSlideStep}`);
+            if(currentAnno) currentAnno.classList.add('active');
+
+            // Reset board visuals
             document.querySelectorAll('.demo-cell').forEach(c => {
                 c.style.opacity = '1';
                 c.querySelectorAll('line').forEach(l => {
                     l.style.opacity = '1';
-                    if (l.getAttribute('class') === 'seg-invalid') {
+                    // Revert C back to O if needed
+                    if (l.id === 'demo-seg-3-1' || l.id === 'demo-seg-3-2') {
                         l.setAttribute('class', 'seg-on');
                     }
                 });
-                const circle = c.querySelector('circle');
-                if(circle) circle.setAttribute('class', 'dot-active');
             });
-            
-            document.querySelectorAll('.anno-text').forEach(el => el.style.display = 'none');
-            const anno1 = document.getElementById('anno-1');
-            if(anno1) anno1.style.display = 'block';
+            setVoid(2, false); // Reset U void
 
-            // SLOWED DOWN: Show first annotation for 5.5 seconds
-            setTimeout(() => {
-                setVoid(5, true); 
-                setWordOpacity(0, 4, '0.7'); 
-                setWordOpacity(6, 10, '1');  
+            // Apply step logic
+            if (currentSlideStep === 0) {
+                // Base state: fully bright
+            } 
+            else if (currentSlideStep === 1) {
+                setVoid(2, true); // Void U
+                setWordOpacity(0, 1, '0.7'); // Dim FL
+                setWordOpacity(3, 10, '1'); // ORESCENT active
+            } 
+            else if (currentSlideStep === 2) {
+                setVoid(2, true); // Void U
+                setWordOpacity(0, 1, '0.7'); // Dim FL
+                setWordOpacity(3, 10, '1'); // ORESCENT active
                 
-                if(anno1) anno1.style.display = 'none';
-                const anno2 = document.getElementById('anno-2');
-                if(anno2) anno2.style.display = 'block';
-            }, 5500);
-
-            // SLOWED DOWN: Show second annotation up to 11.5 seconds
-            setTimeout(() => {
-                setVoid(5, false); 
-                setVoid(2, true);  
-                
-                setWordOpacity(0, 1, '0.7');  
-                setWordOpacity(3, 10, '0.7'); 
-                
-                const anno2 = document.getElementById('anno-2');
-                if(anno2) anno2.style.display = 'none';
-                const anno3 = document.getElementById('anno-3');
-                if(anno3) anno3.style.display = 'block';
-            }, 11500);
-
-            // SLOWED DOWN: Show third annotation up to 17 seconds
-            setTimeout(() => {
-                const cellO = document.getElementById('demo-cell-3');
-                if(cellO) {
-                    cellO.style.opacity = '1'; 
-                    const seg1 = document.getElementById('demo-seg-3-1');
-                    if(seg1) seg1.style.opacity = '0'; 
-                    cellO.querySelectorAll('.seg-on').forEach(el => el.setAttribute('class', 'seg-invalid'));
-                }
-            }, 17000);
-
-            // SLOWED DOWN: Show error fix up to 20 seconds
-            setTimeout(() => {
-                const cellO = document.getElementById('demo-cell-3');
+                // Splice O to C
+                const seg1 = document.getElementById('demo-seg-3-1');
                 const seg2 = document.getElementById('demo-seg-3-2');
-                if(seg2) seg2.style.opacity = '0'; 
-                if(cellO) cellO.querySelectorAll('.seg-invalid').forEach(el => el.setAttribute('class', 'seg-on'));
-                setWordOpacity(3, 10, '1'); 
-            }, 20000);
+                if (seg1) seg1.setAttribute('class', 'seg-off');
+                if (seg2) seg2.setAttribute('class', 'seg-off');
+            }
+
+            // Update buttons
+            document.getElementById('prev-btn').style.display = currentSlideStep === 0 ? 'none' : 'inline-block';
+            if (currentSlideStep === totalSteps - 1) {
+                document.getElementById('next-btn').style.display = 'none';
+                document.getElementById('start-btn').style.display = 'inline-block';
+            } else {
+                document.getElementById('next-btn').style.display = 'inline-block';
+                document.getElementById('start-btn').style.display = 'none';
+            }
+        };
+
+        window.nextSlide = function() {
+            if (currentSlideStep < totalSteps - 1) {
+                currentSlideStep++;
+                updateSlideView();
+            }
+        };
+        
+        window.prevSlide = function() {
+            if (currentSlideStep > 0) {
+                currentSlideStep--;
+                updateSlideView();
+            }
+        };
+        
+        window.closeModal = function() {
+            document.getElementById('welcome-modal').style.display = 'none';
+            localStorage.setItem('fluorescent_welcomed', 'true');
+        };
+
+        // Swipe logic
+        let touchStartX = 0;
+        let touchEndX = 0;
+        const welcomeBox = document.getElementById('welcome-box');
+        
+        welcomeBox.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, {passive: true});
+
+        welcomeBox.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        }, {passive: true});
+
+        function handleSwipe() {
+            const threshold = 40;
+            if (touchEndX < touchStartX - threshold) nextSlide(); // Swipe left
+            if (touchEndX > touchStartX + threshold) prevSlide(); // Swipe right
         }
 
-        runAnim();
-        // SLOWED DOWN: Loop repeats every 24 seconds
-        setInterval(runAnim, 24000); 
+        updateSlideView();
 
         if (localStorage.getItem('fluorescent_welcomed') !== 'true') {
             const modal = document.getElementById('welcome-modal');
