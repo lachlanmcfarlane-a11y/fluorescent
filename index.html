@@ -1399,6 +1399,9 @@ function copyToClipboard(text) {
         }
 
         window.updateSlideView = function() {
+            // CLEANUP: Always clear the continuous animation interval when moving slides
+            if (window.spliceAnimInterval) clearInterval(window.spliceAnimInterval);
+
             // Update dots
             document.querySelectorAll('.swipe-dot').forEach((d, i) => {
                 d.className = i === currentSlideStep ? 'swipe-dot active' : 'swipe-dot';
@@ -1414,12 +1417,16 @@ function copyToClipboard(text) {
                 c.style.opacity = '1';
                 c.querySelectorAll('line').forEach(l => {
                     l.style.opacity = '1';
-                    // Revert C back to O if needed
-                    if (l.id === 'demo-seg-3-1' || l.id === 'demo-seg-3-2') {
-                        l.setAttribute('class', 'seg-on');
-                    }
                 });
             });
+
+            // Reset the 'O' character (demo-cell-3) thoroughly to Valid 'O'
+            for (let i = 0; i < 14; i++) {
+                let line = document.getElementById(`demo-seg-3-${i}`);
+                if (line) {
+                    line.setAttribute('class', [0, 1, 2, 3, 4, 5].includes(i) ? 'seg-on' : 'seg-off');
+                }
+            }
             setVoid(2, false); // Reset U void
 
             // Apply step logic
@@ -1436,11 +1443,32 @@ function copyToClipboard(text) {
                 setWordOpacity(0, 1, '0.7'); // Dim FL
                 setWordOpacity(3, 10, '1'); // ORESCENT active
                 
-                // Splice O to C
+                // Continuous Splice Animation: O -> Splice -> C
+                let animState = 0;
+                const baseSegs = [0, 3, 4, 5].map(i => document.getElementById(`demo-seg-3-${i}`));
                 const seg1 = document.getElementById('demo-seg-3-1');
                 const seg2 = document.getElementById('demo-seg-3-2');
-                if (seg1) seg1.setAttribute('class', 'seg-off');
-                if (seg2) seg2.setAttribute('class', 'seg-off');
+
+                function tickAnimation() {
+                    if (animState === 0) { // Valid O (Cyan)
+                        if(seg1) seg1.setAttribute('class', 'seg-on');
+                        if(seg2) seg2.setAttribute('class', 'seg-on');
+                        baseSegs.forEach(s => s && s.setAttribute('class', 'seg-on'));
+                    } else if (animState === 1) { // Invalid Splice (Red)
+                        if(seg1) seg1.setAttribute('class', 'seg-off');
+                        if(seg2) seg2.setAttribute('class', 'seg-invalid');
+                        baseSegs.forEach(s => s && s.setAttribute('class', 'seg-invalid'));
+                    } else if (animState === 2) { // Valid C (Cyan)
+                        if(seg1) seg1.setAttribute('class', 'seg-off');
+                        if(seg2) seg2.setAttribute('class', 'seg-off');
+                        baseSegs.forEach(s => s && s.setAttribute('class', 'seg-on'));
+                    }
+                    animState = (animState + 1) % 3;
+                }
+
+                // Initial run is already taken care of by the reset loop above (it holds Valid O),
+                // so we just start the interval to advance and change states
+                window.spliceAnimInterval = setInterval(tickAnimation, 1000); 
             }
 
             // Update buttons
@@ -1469,6 +1497,7 @@ function copyToClipboard(text) {
         };
         
         window.closeModal = function() {
+            if (window.spliceAnimInterval) clearInterval(window.spliceAnimInterval); // Cleanup on close
             document.getElementById('welcome-modal').style.display = 'none';
             localStorage.setItem('fluorescent_welcomed', 'true');
         };
