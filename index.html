@@ -1435,11 +1435,10 @@ function copyToClipboard(text) {
                 // Base state: fully bright
             } 
             else if (currentSlideStep === 1) {
-                // Slide 2: Moving void cycle across the word to show non-word dimming (FL.ORESCENT ➔ FLUOR.ESCENT ➔ FLUORESC.ENT)
+                // Slide 2: Moving void cycle where split chunks that aren't standalone words dim out
                 let voidStep = 0;
                 
                 function tickVoidAnimation() {
-                    // Reset all voids and opacities first
                     for (let i = 0; i < 11; i++) {
                         setVoid(i, false);
                         const cell = document.getElementById(`demo-cell-${i}`);
@@ -1447,19 +1446,19 @@ function copyToClipboard(text) {
                     }
 
                     if (voidStep === 0) {
-                        // Void U (index 2) -> FL (dim), ORESCENT (bright)
+                        // Void U (index 2) -> FL (bright valid word), ORESCENT (dim non-word)
                         setVoid(2, true);
-                        setWordOpacity(0, 1, '0.7');
-                        setWordOpacity(3, 10, '1');
+                        setWordOpacity(0, 1, '1');
+                        setWordOpacity(3, 10, '0.7');
                     } else if (voidStep === 1) {
-                        // Void R (index 4) -> FLUOR (dim), ESCENT (bright)
+                        // Void R (index 4) -> FLUOR (bright valid word), ESCENT (dim non-word)
                         setVoid(4, true);
-                        setWordOpacity(0, 4, '0.7');
-                        setWordOpacity(5, 10, '1');
+                        setWordOpacity(0, 4, '1');
+                        setWordOpacity(5, 10, '0.7');
                     } else if (voidStep === 2) {
-                        // Void S (index 6) -> FLUORES (dim), CENT (bright)
+                        // Void S (index 6) -> FLUORES (bright valid word), CENT (bright valid word)
                         setVoid(6, true);
-                        setWordOpacity(0, 6, '0.7');
+                        setWordOpacity(0, 6, '1');
                         setWordOpacity(7, 10, '1');
                     }
                     voidStep = (voidStep + 1) % 3;
@@ -1482,19 +1481,19 @@ function copyToClipboard(text) {
                         if(seg1) seg1.setAttribute('class', 'seg-on');
                         if(seg2) seg2.setAttribute('class', 'seg-on');
                         baseSegs.forEach(s => s && s.setAttribute('class', 'seg-on'));
-                        setWordOpacity(0, 1, '0.7'); // FL dim
+                        setWordOpacity(0, 1, '1'); // FL bright
                         setWordOpacity(3, 10, '0.7'); // ORESCENT dim (invalid chunk)
                     } else if (animState === 1) { // Invalid Red Splice
                         if(seg1) seg1.setAttribute('class', 'seg-off');
                         if(seg2) seg2.setAttribute('class', 'seg-invalid');
                         baseSegs.forEach(s => s && s.setAttribute('class', 'seg-invalid'));
-                        setWordOpacity(0, 1, '0.7');
+                        setWordOpacity(0, 1, '1');
                         setWordOpacity(3, 10, '0.7');
                     } else if (animState === 2) { // CRESCENT (Valid C, chunk becomes fully bright!)
                         if(seg1) seg1.setAttribute('class', 'seg-off');
                         if(seg2) seg2.setAttribute('class', 'seg-off');
                         baseSegs.forEach(s => s && s.setAttribute('class', 'seg-on'));
-                        setWordOpacity(0, 1, '0.7'); // FL dim
+                        setWordOpacity(0, 1, '1'); // FL bright
                         setWordOpacity(3, 10, '1');  // CRESCENT bright!
                     }
                     animState = (animState + 1) % 3;
@@ -1543,11 +1542,6 @@ function copyToClipboard(text) {
         
         welcomeBox.addEventListener('touchstart', e => {
             touchStartX = e.changedTouches[0].screenX;
-        }, {passive: true});
-
-        welcomeBox.addEventListener('touched', e => {
-            touchEndX = e.changedTouches[0].screenX;
-            handleSwipe();
         }, {passive: true});
 
         welcomeBox.addEventListener('touchend', e => {
