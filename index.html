@@ -475,7 +475,9 @@ let daysPassed = realDaysPassed;
 
 if (devDayStored !== null) {
     let parsedDevDay = parseInt(devDayStored, 10);
-    if (isNaN(parsedDevDay) || parsedDevDay <= realDaysPassed) {
+    // FIX: Changed <= to > so it properly allows past days, 
+    // but prevents invalid/future days.
+    if (isNaN(parsedDevDay) || parsedDevDay > realDaysPassed || parsedDevDay < 0) {
         localStorage.removeItem('carver_dev_day');
         daysPassed = realDaysPassed;
     } else {
