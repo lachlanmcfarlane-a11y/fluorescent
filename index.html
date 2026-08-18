@@ -1377,7 +1377,12 @@ function copyToClipboard(text) {
         window.setWordOpacity = function(start, end, op) {
             for(let i=start; i<=end; i++) {
                 const cell = document.getElementById(`demo-cell-${i}`);
-                if(cell) cell.style.opacity = op;
+                if(cell) {
+                    // Target the inner lines so it applies the exact same dimming class/opacity pattern as the game board
+                    cell.querySelectorAll('line').forEach(l => {
+                        l.style.opacity = op;
+                    });
+                }
             }
         }
 
@@ -1435,28 +1440,28 @@ function copyToClipboard(text) {
                 // Base state: fully bright
             } 
             else if (currentSlideStep === 1) {
-                // Slide 2: Moving void cycle where split chunks that aren't standalone words dim out
+                // Slide 2: Moving void cycle matching user request (FL bright, ORESCENT dim; FLUOR bright, ESCENT dim; etc.)
                 let voidStep = 0;
                 
                 function tickVoidAnimation() {
                     for (let i = 0; i < 11; i++) {
                         setVoid(i, false);
                         const cell = document.getElementById(`demo-cell-${i}`);
-                        if (cell) cell.style.opacity = '1';
+                        if (cell) cell.querySelectorAll('line').forEach(l => l.style.opacity = '1');
                     }
 
                     if (voidStep === 0) {
-                        // Void U (index 2) -> FL (bright valid word), ORESCENT (dim non-word)
+                        // Void U (index 2) -> FL bright, ORESCENT dim
                         setVoid(2, true);
                         setWordOpacity(0, 1, '1');
                         setWordOpacity(3, 10, '0.7');
                     } else if (voidStep === 1) {
-                        // Void R (index 4) -> FLUOR (bright valid word), ESCENT (dim non-word)
+                        // Void R (index 4) -> FLUOR bright, ESCENT dim
                         setVoid(4, true);
                         setWordOpacity(0, 4, '1');
                         setWordOpacity(5, 10, '0.7');
                     } else if (voidStep === 2) {
-                        // Void S (index 6) -> FLUORES (bright valid word), CENT (bright valid word)
+                        // Void S (index 6) -> FLUORES bright, CENT bright
                         setVoid(6, true);
                         setWordOpacity(0, 6, '1');
                         setWordOpacity(7, 10, '1');
