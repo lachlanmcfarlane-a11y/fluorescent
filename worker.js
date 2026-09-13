@@ -13,10 +13,10 @@ function getAustralianSector(ms = Date.now()) {
     month: '2-digit',
     day: '2-digit'
   });
-  const todayStr = formatter.format(new Date(ms)); // Formats as YYYY-MM-DD
+  const todayStr = formatter.format(new Date(ms)); 
   const startDate = new Date('2026-01-01T00:00:00Z');
   const currentDate = new Date(`${todayStr}T00:00:00Z`);
-return Math.floor((currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.floor((currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 export default {
@@ -36,7 +36,6 @@ export default {
           sector, syslogs, sectorTotalScore, cumulativeWords
         } = body;
 
-        // Security check for max attempts per sector
         const countCheck = await env.DB.prepare(
           `SELECT COUNT(*) as attempt_count
            FROM execute_logs
@@ -52,15 +51,14 @@ export default {
           });
         }
 
-        // --- SERVER-SIDE AUSTRALIAN DAY VALIDATION ---
         const currentSector = getAustralianSector();
         const isCurrentDay = Number(sector) === currentSector;
 
         let newWords = [];
         let highestScoreWords = [];
         let isHighest5of5 = false;
+        let wordRanks = {}; // Track rankings for the frontend
 
-        // ONLY evaluate trophies if the submission matches Australian today's sector
         if (isCurrentDay) {
           const existingLogs = await env.DB.prepare(
             `SELECT words_played, sector_total_score, cumulative_words 
@@ -71,8 +69,10 @@ export default {
           .all();
 
           const existingWords = new Set();
-          let maxWordScoreToday = 0;
           let max5of5ScoreToday = 0;
+          
+          // 1. Use a Set to track unique "WORD:SCORE" combinations
+          const uniquePlays = new Set();
 
           if (existingLogs && existingLogs.results) {
             for (const row of existingLogs.results) {
@@ -82,9 +82,12 @@ export default {
                   if (Array.isArray(words)) {
                     for (const item of words) {
                       if (item && item.word) {
-                        existingWords.add(item.word.toUpperCase());
-                        if (typeof item.score === 'number' && item.score > maxWordScoreToday) {
-                          maxWordScoreToday = item.score;
+                        const wUpper = item.word.toUpperCase();
+                        existingWords.add(wUpper);
+                        
+                        if (typeof item.score === 'number') {
+                          // Add to Set (duplicates of same word+score are automatically ignored)
+                          uniquePlays.add(`${wUpper}:${item.score}`);
                         }
                       }
                     }
@@ -105,15 +108,38 @@ export default {
             }
           }
 
+          // 2. Add the current submission to the unique pool
+          if (Array.isArray(wordsPlayed)) {
+            for (const item of wordsPlayed) {
+              if (item && item.word && typeof item.score === 'number') {
+                uniquePlays.add(`${item.word.toUpperCase()}:${item.score}`);
+              }
+            }
+          }
+
+          // 3. Extract just the scores from the unique plays and sort descending
+          const sortedAllScores = Array.from(uniquePlays)
+            .map(entry => Number(entry.split(':')[1]))
+            .sort((a, b) => b - a);
+          
+          const absoluteHighestToday = sortedAllScores[0];
+
           if (Array.isArray(wordsPlayed)) {
             for (const item of wordsPlayed) {
               if (item && item.word) {
                 const wUpper = item.word.toUpperCase();
+                
                 if (!existingWords.has(wUpper)) {
                   newWords.push(wUpper);
                 }
-                if (typeof item.score === 'number' && (item.score >= maxWordScoreToday || maxWordScoreToday === 0)) {
-                  highestScoreWords.push(wUpper);
+                
+                if (typeof item.score === 'number') {
+                  if (item.score === absoluteHighestToday) {
+                    highestScoreWords.push(wUpper);
+                  }
+                  
+                  // 4. Find the rank in the filtered array
+                  wordRanks[wUpper] = sortedAllScores.indexOf(item.score) + 1;
                 }
               }
             }
@@ -130,14 +156,12 @@ export default {
             }
           }
         }
-// --- INJECT TROPHY INTO SYSLOGS BEFORE SAVING ---
-        // If they got the highest score, attach the emoji directly to their syslog for this sector
+
         if (isHighest5of5 && syslogs && syslogs[sector]) {
             syslogs[sector].isHighest5of5 = true;
             syslogs[sector].sectorTrophy = '🏆';
         }
 
-        // Always log play history
         await env.DB.prepare(
           `INSERT INTO execute_logs (
             user_id, sector, score, max_word_length, syslogs,
@@ -160,6 +184,7 @@ export default {
 
         return new Response(JSON.stringify({ 
           success: true,
+          wordRanks, // Send the calculated ranks back to the client
           trophies: {
             newWords,
             highestScoreWords,
