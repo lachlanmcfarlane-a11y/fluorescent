@@ -1092,13 +1092,13 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
                         let gRank = resData.wordRanks[w];
                         if (!gRank) return '';
                         if (gRank === 1) {
-                            return `Global Rank: highest today!`;
+                            return `Global Rank: top word today!`;
                         }
                         let suffix = "th";
                         if (gRank % 10 === 1 && gRank % 100 !== 11) suffix = "st";
                         else if (gRank % 10 === 2 && gRank % 100 !== 12) suffix = "nd";
                         else if (gRank % 10 === 3 && gRank % 100 !== 13) suffix = "rd";
-                        return `Global Rank: ${gRank}${suffix} highest today`;
+                        return `Global Rank: ${gRank}${suffix} highest word today`;
                     }).filter(m => m !== '').join('<br>');
                     
                     if (globalRankMessages) rankDomElem.innerHTML = globalRankMessages;
