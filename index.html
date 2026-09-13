@@ -123,7 +123,6 @@
         .seg-off { stroke: var(--off-seg); transition: all 0.2s ease;}
         .seg-invalid { stroke: var(--danger); filter: drop-shadow(0 0 4px var(--danger-glow)); }
 
-        /* Unified Blue Tinge for Ready State (Game, Title, & Demo) */
         #main-word.ready-state .letter-wrapper:not(.letter-dimmed) .seg-on,
         #animated-title.ready-state .letter-wrapper:not(.letter-dimmed) .seg-on,
         #demo-board.ready-state .demo-cell:not(.letter-dimmed) .seg-on {
@@ -1276,14 +1275,14 @@ function copyToClipboard(text) {
                     }
                 }
             }
+
+            let isInitialState = (currentTitleState === 0 || currentTitleState === 4 || currentTitleState === 6);
             
-            if (validIndices.size > 0) {
+            if (validIndices.size > 0 && !isInitialState) {
                 container.classList.add('ready-state');
             } else {
                 container.classList.remove('ready-state');
             }
-
-            let isInitialState = (currentTitleState === 0 || currentTitleState === 4 || currentTitleState === 6);
 
             for(let i=0; i<chars.length; i++) {
                 let isHidden = (chars[i] === '.');
@@ -1437,14 +1436,17 @@ function copyToClipboard(text) {
                     }
 
                     if (voidStep === 0) {
+                        document.getElementById('demo-board').classList.remove('ready-state');
                         setVoid(2, true);
                         setWordDimmed(0, 1, true);
                         setWordDimmed(3, 10, true);
                     } else if (voidStep === 1) {
+                        document.getElementById('demo-board').classList.remove('ready-state');
                         setVoid(4, true);
                         setWordDimmed(0, 3, true);
                         setWordDimmed(5, 10, true);
                     } else if (voidStep === 2) {
+                        document.getElementById('demo-board').classList.add('ready-state');
                         setVoid(6, true);
                         setWordDimmed(0, 5, true);
                         setWordDimmed(7, 10, false);
