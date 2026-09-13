@@ -95,6 +95,23 @@
             flex-direction: column;
             align-items: center;
             margin: 2px 2px 15px 2px;
+            transition: margin 0.25s ease;
+            position: relative;
+        }
+
+        .letter-wrapper.letter-selected-wrapper {
+            z-index: 20;
+            margin-left: 16px;
+            margin-right: 16px;
+        }
+
+        .letter-wrapper.letter-selected-wrapper::before {
+            content: '';
+            position: absolute;
+            inset: -10px -18px 4px -18px;
+            background: rgba(85,255,204,0.06);
+            border-radius: 10px;
+            z-index: -1;
         }
 
         .letter-dimmed line, .demo-cell.letter-dimmed line {
@@ -111,6 +128,14 @@
             display: inline-block; 
             transform: skewX(-10deg); 
             overflow: visible; 
+            transition: transform 0.25s ease;
+        }
+
+        .letter.letter-selected {
+            transform: skewX(-10deg) scale(1.9);
+            outline: 3px solid var(--accent);
+            outline-offset: 10px;
+            border-radius: 8px;
         }
         
         .interactive line { 
@@ -120,7 +145,7 @@
             stroke-linecap: round;
         }
         .seg-on { stroke: var(--accent); filter: drop-shadow(0 0 4px var(--accent-glow)); transition: all 0.2s ease;}
-        .seg-off { stroke: var(--off-seg); transition: all 0.2s ease;}
+        .seg-off { stroke: var(--off-seg); opacity: 0.45; transition: all 0.2s ease;}
         .seg-invalid { stroke: var(--danger); filter: drop-shadow(0 0 4px var(--danger-glow)); }
 
         #main-word.ready-state .letter-wrapper:not(.letter-dimmed) .seg-on,
@@ -380,7 +405,7 @@
             </div>
             <div class="anno-text" id="anno-2">
                 <span class="anno-highlight">3. SEGMENT SPLICING</span>
-                Toggle individual segments on/off to morph invalid shapes into valid letters. You can make up to 10 segment splices per move. On mobile, pinch-to-zoom if it's hard to hit the right segment.
+                Tap a letter to zoom in on it, then toggle individual segments on/off to morph invalid shapes into valid letters. You can make up to 10 segment splices per move. Tap elsewhere to zoom back out.
             </div>
         </div>
 
@@ -564,6 +589,7 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
         let currentState = []; 
         let editsMade = 0; 
         let hiddenLetterIndex = -1;
+        let selectedLetterIndex = -1;
         
         let globalScore = 0;
         let usedWordsThisSession = []; 
@@ -649,6 +675,38 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
             {x1:50, y1:15, x2:50, y2:65}, {x1:85, y1:15, x2:55, y2:65}, {x1:15, y1:125, x2:45, y2:75},
             {x1:50, y1:125, x2:50, y2:75}, {x1:85, y1:125, x2:55, y2:75}
         ];
+
+        // Segments 8-13 are the diagonal/vertical spokes that all converge near the
+        // center of the letter. At the shared stroke-width used for the rest of the
+        // segments their invisible hit-areas overlap heavily right where they meet,
+        // which is exactly where mistaps happen most. For these six segments we trim
+        // the hit-line back from the center point and use a slimmer hit stroke so
+        // adjacent hitboxes don't stack on top of each other.
+        const CENTER_TRIM_SEGMENTS = new Set([8, 9, 10, 11, 12, 13]);
+        const CENTER_TRIM_AMOUNT = 14;
+        const CENTER_TRIM_HIT_WIDTH = 14;
+        const DEFAULT_HIT_WIDTH = 25;
+
+        function trimLineEnd(x1, y1, x2, y2, trimAmount) {
+            const dx = x2 - x1, dy = y2 - y1;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            if (len === 0) return { x2, y2 };
+            const ratio = Math.max(0, (len - trimAmount) / len);
+            return { x2: x1 + dx * ratio, y2: y1 + dy * ratio };
+        }
+
+        function getHitLineAttrs(segIdx) {
+            const line = SEGMENT_LINES[segIdx];
+            let { x1, y1, x2, y2 } = line;
+            let width = DEFAULT_HIT_WIDTH;
+            if (CENTER_TRIM_SEGMENTS.has(segIdx)) {
+                const trimmed = trimLineEnd(x1, y1, x2, y2, CENTER_TRIM_AMOUNT);
+                x2 = trimmed.x2;
+                y2 = trimmed.y2;
+                width = CENTER_TRIM_HIT_WIDTH;
+            }
+            return { x1, y1, x2, y2, width };
+        }
 
         function buildHelpUI() {
             let html = '';
@@ -794,6 +852,22 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
             return VALID_STATE_MAP[stateArr.join(',')] || '?'; 
         }
 
+        function selectLetter(idx) {
+            if (isGameLocked) return;
+            if (idx === hiddenLetterIndex) return;
+            if (selectedLetterIndex === idx) return;
+            selectedLetterIndex = idx;
+            renderMainWord();
+            updateStats();
+        }
+
+        function deselectLetter() {
+            if (selectedLetterIndex === -1) return;
+            selectedLetterIndex = -1;
+            renderMainWord();
+            updateStats();
+        }
+
         function toggleSegment(letterIdx, segIdx) {
             if (isGameLocked) return;
 
@@ -829,6 +903,10 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
                 setTimeout(() => el.classList.remove('danger'), 300);
                 return;
             }
+
+            if (hiddenLetterIndex === idx && selectedLetterIndex === idx) {
+                selectedLetterIndex = -1;
+            }
             
             renderMainWord();
             updateStats();
@@ -836,20 +914,40 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
 
         function getSVGHTML(stateArr, letterIdx, interactive) {
             let isHidden = (letterIdx === hiddenLetterIndex);
+            let isSelected = interactive && (letterIdx === selectedLetterIndex);
             let char = getLetterChar(stateArr, letterIdx);
             let isInvalid = (char === '?');
             
-            let svg = `<svg viewBox="0 0 100 140" class="letter ${interactive && !isGameLocked && !isHidden ? 'interactive' : ''}">`;
+            let svgClasses = `letter ${interactive && !isGameLocked && !isHidden ? 'interactive' : ''} ${isSelected ? 'letter-selected' : ''}`;
+            let svg = `<svg viewBox="0 0 100 140" class="${svgClasses}">`;
+
+            // Catch-all region matching the visual outline boundary. Sits underneath the
+            // segment hit-lines and dot (added later, so they still take priority when
+            // tapped directly), and exists purely so a tap anywhere inside the outlined
+            // box registers as "still on this letter" instead of falling through to the
+            // background and triggering a deselect.
+            if (interactive && !isGameLocked && !isHidden && isSelected) {
+                svg += `<rect x="-22" y="-22" width="144" height="184" fill="transparent"></rect>`;
+            }
+
             for(let i=0; i<14; i++) {
                 let isOn = isHidden ? 0 : stateArr[i];
                 let classStr = isOn ? (isInvalid ? 'seg-invalid' : 'seg-on') : 'seg-off';
-                let events = interactive && !isGameLocked && !isHidden ? `onpointerdown="toggleSegment(${letterIdx}, ${i})"` : '';
                 
                 svg += `<line x1="${SEGMENT_LINES[i].x1}" y1="${SEGMENT_LINES[i].y1}" x2="${SEGMENT_LINES[i].x2}" y2="${SEGMENT_LINES[i].y2}" class="${classStr}"></line>`;
                 
-                if (interactive && !isGameLocked && !isHidden) {
-                    svg += `<line x1="${SEGMENT_LINES[i].x1}" y1="${SEGMENT_LINES[i].y1}" x2="${SEGMENT_LINES[i].x2}" y2="${SEGMENT_LINES[i].y2}" stroke="transparent" stroke-width="25" style="cursor:pointer;" ${events}></line>`;
+                // Only the selected (zoomed-in) letter gets per-segment tap targets,
+                // so a first tap on an unselected letter can't accidentally flip a segment.
+                if (interactive && !isGameLocked && !isHidden && isSelected) {
+                    let hit = getHitLineAttrs(i);
+                    svg += `<line x1="${hit.x1}" y1="${hit.y1}" x2="${hit.x2}" y2="${hit.y2}" stroke="transparent" stroke-width="${hit.width}" style="cursor:pointer;" onpointerdown="toggleSegment(${letterIdx}, ${i})"></line>`;
                 }
+            }
+
+            // Whole-letter tap target to select/zoom, placed UNDER the dot layer below
+            // so it never steals taps meant for the void dot.
+            if (interactive && !isGameLocked && !isHidden && !isSelected) {
+                svg += `<rect x="-10" y="-10" width="120" height="160" fill="transparent" style="cursor:pointer;" onpointerdown="selectLetter(${letterIdx})"></rect>`;
             }
             
             let dotClass = isHidden ? 'dot-voided' : 'dot-active';
@@ -860,13 +958,15 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
             }
             
             svg += `</svg>`;
-            return `<div class="letter-wrapper">${svg}</div>`;
+            let wrapperClass = `letter-wrapper${isSelected ? ' letter-selected-wrapper' : ''}`;
+            return `<div class="${wrapperClass}" data-idx="${letterIdx}">${svg}</div>`;
         }
 
         function resetBoard() {
             if (isGameLocked) return;
             currentState = startingState.map(arr => [...arr]);
             hiddenLetterIndex = -1;
+            selectedLetterIndex = -1;
             recalculateEdits();
             renderMainWord();
             updateStats();
@@ -1051,6 +1151,7 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
             usedWordsThisSession.push(comboStr);
             currentState = startingState.map(arr => [...arr]);
             hiddenLetterIndex = -1;
+            selectedLetterIndex = -1;
             recalculateEdits();
             
             let maxWordLength = rawComboWords.reduce((max, word) => Math.max(max, word.length), 0);
@@ -1315,6 +1416,19 @@ function copyToClipboard(text) {
             container.innerHTML = html;
             currentTitleState = (currentTitleState + 1) % TITLE_STATES.length;
         }
+
+        // Tap-elsewhere-to-deselect: any pointerdown outside the currently selected
+        // letter's wrapper zooms it back out. Individual segment taps, the void dot,
+        // and selecting a different letter are all handled by their own onpointerdown
+        // handlers above, which naturally match this check (their wrapper IS the
+        // selected one, or becomes the new selected one) so this only fires for
+        // genuinely "elsewhere" taps.
+        document.addEventListener('pointerdown', function(e) {
+            if (selectedLetterIndex === -1) return;
+            let wrapper = e.target.closest ? e.target.closest('.letter-wrapper') : null;
+            if (wrapper && wrapper.dataset && parseInt(wrapper.dataset.idx, 10) === selectedLetterIndex) return;
+            deselectLetter();
+        });
 
         window.onload = () => { 
             loadDictionary(); 
