@@ -15,6 +15,9 @@
             /* Cyan/Teal Fluorescent color matching old-school VFDs */
             --accent: #55ffcc; 
             --accent-glow: rgba(85, 255, 204, 0.4);
+            /* Blue tinge for valid / ready-to-bank words */
+            --bank-ready: #55aaff;
+            --bank-ready-glow: rgba(85, 170, 255, 0.4);
             --danger: #ff3366; 
             --danger-glow: rgba(255, 51, 102, 0.4);
             --off-seg: #0a1f10;
@@ -71,7 +74,6 @@
             text-transform: uppercase;
         }
 
-        /* Target the emoji specifically for the rotation animation */
         .landscape-hint span {
             display: inline-block;
             animation: gentleRotate 3s infinite ease-in-out;
@@ -85,7 +87,6 @@
             100% { transform: rotate(0deg); }
         }
         
-        /* Automatically display only on mobile/portrait screens */
         @media screen and (orientation: portrait) {
             .landscape-hint {
                 display: block;
@@ -96,10 +97,9 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            margin: 2px;
+            margin: 2px 2px 15px 2px; /* Increased bottom margin for larger dots */
         }
 
-        /* Dimming effect for invalid letters */
         .letter-dimmed line {
             opacity: 0.7; 
         }
@@ -109,7 +109,7 @@
             height: clamp(55px, 14vw, 90px); 
             display: inline-block; 
             transform: skewX(-10deg); 
-            overflow: visible; /* Prevents dot clipping */
+            overflow: visible; 
         }
         
         .interactive line { 
@@ -118,12 +118,22 @@
             stroke-width: 16; 
             stroke-linecap: round;
         }
-        .seg-on { stroke: var(--accent); filter: drop-shadow(0 0 4px var(--accent-glow)); }
-        .seg-off { stroke: var(--off-seg); }
+        .seg-on { stroke: var(--accent); filter: drop-shadow(0 0 4px var(--accent-glow)); transition: all 0.2s ease;}
+        .seg-off { stroke: var(--off-seg); transition: all 0.2s ease;}
         .seg-invalid { stroke: var(--danger); filter: drop-shadow(0 0 4px var(--danger-glow)); }
+
+        /* Dynamic Blue Tinge for Ready State */
+        #main-word.ready-state .letter-wrapper:not(.letter-dimmed) .seg-on {
+            stroke: var(--bank-ready);
+            filter: drop-shadow(0 0 4px var(--bank-ready-glow));
+        }
 
         .dot-voided { fill: var(--danger); filter: drop-shadow(0 0 4px var(--danger-glow)); }
         .dot-active { fill: var(--off-seg); stroke: var(--accent); stroke-width: 2px; }
+        
+        #main-word.ready-state .letter-wrapper:not(.letter-dimmed) .dot-active {
+            stroke: var(--bank-ready);
+        }
 
         .stats-box { margin: 15px auto; color: #a1a1aa; font-size: 1rem; max-width: 600px; }
         .parsed-text { 
@@ -155,11 +165,18 @@
             letter-spacing: 1px;
             width: 100%;
             max-width: 250px;
+            transition: all 0.2s ease;
         }
         .btn-primary { background: var(--accent); color: #000; box-shadow: 0 0 10px var(--accent-glow); }
         .btn-primary:active { transform: scale(0.98); }
         .btn-primary:disabled { background: #143d20; color: #52525b; cursor: not-allowed; box-shadow: none; }
         
+        .btn-ready { 
+            background: var(--bank-ready) !important; 
+            color: #000 !important; 
+            box-shadow: 0 0 12px var(--bank-ready-glow) !important; 
+        }
+
         .btn-secondary { background: transparent; color: #a1a1aa; border: 1px solid #143d20; }
         .btn-secondary:active { background: #0a1f10; }
         
@@ -238,9 +255,7 @@
     </style>
 </head>
 <body>
-<!-- 1. ADD THIS BUTTON ANYWHERE IN YOUR HEADER/NAV -->
 <button class="how-to-btn" onclick="document.getElementById('welcome-modal').style.display='flex'">HOW TO PLAY</button>
-<!-- WELCOME MODAL SYSTEM -->
 <style>
     /* Modal Layout */
     #welcome-modal {
@@ -253,14 +268,13 @@
         background: #020804; border: 1px solid var(--accent); border-radius: 8px;
         padding: 30px 20px; max-width: 600px; width: 100%;
         box-shadow: 0 0 40px rgba(85, 255, 204, 0.15); text-align: center;
-        touch-action: pan-y; /* Allow vertical scrolling, handle horizontal swipes in JS */
+        touch-action: pan-y;
     }
     .welcome-title {
         color: var(--accent); font-size: 1.6rem; margin-bottom: 25px;
         letter-spacing: 3px; text-shadow: 0 0 10px var(--accent-glow);
     }
     
-    /* 1:1 Game Match Board Styling */
     .demo-board {
         display: flex; justify-content: center; gap: 2px; margin-bottom: 25px;
         background: rgba(0, 0, 0, 0.6); padding: 15px 10px; border-radius: 6px;
@@ -284,7 +298,6 @@
         transition: all 0.3s ease; 
     }
 
-    /* Annotation Text */
     .anno-container { position: relative; height: 110px; margin-bottom: 20px; }
     .anno-text {
         position: absolute; width: 100%; color: #d4d4d8;
@@ -299,7 +312,6 @@
         to { opacity: 1; transform: translateY(0); }
     }
     
-    /* Buttons */
     .how-to-btn {
         background: transparent; border: 1px solid var(--accent); color: var(--accent);
         padding: 6px 16px; border-radius: 4px; font-family: inherit; font-size: 0.9rem;
@@ -386,7 +398,6 @@
             
             <div id="history-stats" style="margin: 15px 0; border-bottom: 1px dashed #143d20; padding-bottom: 10px;"></div>
             <div id="history-list" style="max-height: 300px; overflow-y: auto; font-size: 0.85rem; padding-right: 5px;"></div>
-                 <!-- AWARDS LEGEND KEY -->
             <div style="margin: 10px 0; padding: 8px; background: var(--panel); border: 1px solid #143d20; border-radius: 6px; font-size: 0.75rem; color: #a1a1aa;">
                 <div style="color: var(--accent); font-weight: bold; margin-bottom: 5px; text-align: center; letter-spacing: 1px; font-size: 0.8rem;">AWARDS LEGEND</div>
                 <div style="display: flex; flex-direction: column; gap: 4px;">
@@ -420,7 +431,6 @@
         <div>SCORE <span id="global-score">0</span></div>
     </div>
 
-    <!-- The main word container -->
     <div class="word-container" id="main-word"></div>
     <div id="landscape-hint" class="landscape-hint">
         <span>📱</span> Rotate device for optimal splicing
@@ -495,7 +505,6 @@
         const DAILY_WORDS = [
             ...ORIGINAL_WORDS, 
             ...ORIGINAL_WORDS, 
-            // NEW WORDS BEGIN HERE (Sector 280 onwards)
             'SYNDICATE', 'OSCILLATION', 'CHEMISTRY', 'ECOSYSTEM', 'PARALLEL',
             'TELESCOPE', 'AQUARIUM', 'INFRASTRUCTURE', 'THERMOMETER', 'VANDERBILT',
             'RESONANCE', 'METALLURGY', 'MACROSCOPIC', 'SATELLITE', 'ZIGZAGGING',
@@ -513,29 +522,22 @@
             'SYNTHETIC', 'MICROBIOLOGY', 'ELECTROMAGNETIC', 'FLUORESCENT', 'PHOTOSYNTHESIS'
         ];
         
-// 1. Set start date in local time (Jan 1, 2026)
 const START_DATE = new Date(2026, 0, 1);
 
 function getRealDaysPassed() {
     const now = new Date();
-    // Compare local midnights so the game rolls over at local 00:00 AM
     const localNow = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const localStart = new Date(START_DATE.getFullYear(), START_DATE.getMonth(), START_DATE.getDate()).getTime();
-    
-    // Math.round safely handles daylight saving time shifts (23 or 25-hour days)
     return Math.round((localNow - localStart) / (1000 * 60 * 60 * 24));
 }
 
 let realDaysPassed = getRealDaysPassed();
 
-// 2. Resolve Dev Mode override
 let devDayStored = localStorage.getItem('carver_dev_day');
 let daysPassed = realDaysPassed;
 
 if (devDayStored !== null) {
     let parsedDevDay = parseInt(devDayStored, 10);
-    // FIX: Changed <= to > so it properly allows past days, 
-    // but prevents invalid/future days.
     if (isNaN(parsedDevDay) || parsedDevDay > realDaysPassed || parsedDevDay < 0) {
         localStorage.removeItem('carver_dev_day');
         daysPassed = realDaysPassed;
@@ -570,7 +572,6 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
         let canSubmit = false;
         let isGameLocked = false;
 
-        
         let userId = localStorage.getItem('fluorescent_user_id');
         if (!userId) {
             userId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
@@ -584,7 +585,6 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
                 const response = await fetch('https://raw.githubusercontent.com/redbo/scrabble/master/dictionary.txt', { signal: controller.signal });
                 clearTimeout(timeoutId);
                 
-                // Ensure we actually got the dictionary file, not a rate-limit HTML page
                 if (!response.ok) throw new Error("Rate limited or network error");
                 
                 const text = await response.text();
@@ -593,7 +593,6 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
                 isDictLoaded = true;
                 document.getElementById('banner').style.display = 'none';
             } catch (e) {
-                // If blocked, rate-limited, or offline, clear dictionary to trigger fallback logic
                 dictionary.clear(); 
                 document.getElementById('banner').style.display = 'inline-block';
                 document.getElementById('banner').innerText = "SYS: OFFLINE. VALIDATING ALL NON-RED SHAPES.";
@@ -631,7 +630,7 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
             'Y': [[0,0,0,0,0,0,0,0,1,0,1,0,1,0], [0,1,0,0,0,1,1,1,0,0,0,0,1,0], [0,1,1,0,0,0,0,0,1,0,1,0,0,0]],
             'Z': [[1,0,0,1,0,0,0,0,0,0,1,1,0,0], [0,0,0,1,0,0,1,0,0,0,0,1,0,0], [1,0,0,0,0,0,0,1,0,0,1,0,0,0]],
             ' ': [[0,0,0,0,0,0,0,0,0,0,0,0,0,0]],
-            '@': [[1,0,1,1,1,1,0,0,0,0,0,0,0,0]] /* Custom intermediate 'O' splice */
+            '@': [[1,0,1,1,1,1,0,0,0,0,0,0,0,0]] 
         };
 
         const VALID_STATE_MAP = {};
@@ -648,7 +647,6 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
             {x1:50, y1:125, x2:50, y2:75}, {x1:85, y1:125, x2:55, y2:75}
         ];
 
-        
         function buildHelpUI() {
             let html = '';
             for (let char in MAPPING) {
@@ -852,10 +850,10 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
             }
             
             let dotClass = isHidden ? 'dot-voided' : 'dot-active';
-            svg += `<circle cx="90" cy="132" r="7" class="${dotClass}"></circle>`;
+            svg += `<circle cx="90" cy="145" r="10" class="${dotClass}"></circle>`;
             
             if (interactive && !isGameLocked) {
-                svg += `<circle cx="90" cy="132" r="25" fill="transparent" style="cursor:pointer;" onpointerdown="toggleHide(${letterIdx})"></circle>`;
+                svg += `<circle cx="90" cy="145" r="30" fill="transparent" style="cursor:pointer;" onpointerdown="toggleHide(${letterIdx})"></circle>`;
             }
             
             svg += `</svg>`;
@@ -882,7 +880,6 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
                 document.getElementById('submit-btn').disabled = true;
                 document.getElementById('edits-left').innerText = 0;
                 
-                // Ensure all letters stay fully visible when game is locked
                 let wrappers = document.querySelectorAll('#main-word .letter-wrapper');
                 wrappers.forEach(w => w.classList.remove('letter-dimmed'));
                 return;
@@ -891,7 +888,6 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
             let currentChars = currentState.map((state, idx) => getLetterChar(state, idx));
             document.getElementById('parsed-reading').innerHTML = currentChars.map(c => c === ' ' ? '&nbsp;' : (c === '?' ? '<span class="invalid">?</span>' : c)).join('');
 
-            // Map out where each word starts and ends
             let currentWordStr = currentChars.join('');
             let wordsWithIndices = [];
             let match;
@@ -924,7 +920,6 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
                     } else {
                         bestValidWordsArr.push(w);
                         moveBaseScore += (w.length * w.length * 10);
-                        // Mark these specific letter positions as valid
                         for(let i = wInfo.startIndex; i <= wInfo.endIndex; i++) {
                             validIndices.add(i);
                         }
@@ -941,25 +936,24 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
             
             let wordDisplay = document.getElementById('current-valid-word');
             let isInitialState = (editsMade === 0 && hiddenLetterIndex === -1);
-            
+            let mainWord = document.getElementById('main-word');
+            let submitBtn = document.getElementById('submit-btn');
+
             if (isInitialState) {
                 wordDisplay.innerText = "AWAITING INPUT...";
                 wordDisplay.style.color = "#71717a";
                 canSubmit = false;
             } else if (bestValidWordsArr.length > 0) {
-                // LENIENT MODE: We have at least one valid target!
                 wordDisplay.innerText = bestValidWordsArr.join(' + ');
-                wordDisplay.style.color = "var(--accent)";
+                wordDisplay.style.color = "var(--bank-ready)";
                 canSubmit = true;
                 
-                // Add small warnings if other words on the board were ignored
                 if (duplicateWord) {
                     wordDisplay.innerHTML += ` <span style="color:#71717a; font-size:0.7em;">(Ignored: ${duplicateWord})</span>`;
                 } else if (restrictedWord) {
                     wordDisplay.innerHTML += ` <span style="color:#71717a; font-size:0.7em;">(Ignored: BASE)</span>`;
                 }
             } else {
-                // No valid targets anywhere on the board
                 if (duplicateWord) {
                     wordDisplay.innerText = `ERR: '${duplicateWord}' DUPLICATE`;
                 } else if (restrictedWord) {
@@ -971,29 +965,31 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
                 canSubmit = false;
             }
 
-            document.getElementById('submit-btn').disabled = !canSubmit;
+            submitBtn.disabled = !canSubmit;
 
-            // Apply dimming dynamically ONLY to the segments, preserving dots
+            if (canSubmit) {
+                submitBtn.classList.add('btn-ready');
+                mainWord.classList.add('ready-state');
+            } else {
+                submitBtn.classList.remove('btn-ready');
+                mainWord.classList.remove('ready-state');
+            }
+
             let letterWrappers = document.querySelectorAll('#main-word .letter-wrapper');
             for (let i = 0; i < letterWrappers.length; i++) {
-                // Clear any leftover inline styles from the previous code
                 letterWrappers[i].style.opacity = ''; 
 
                 if (isInitialState || currentChars[i] === ' ') {
-                    // Voided spaces and pristine board stay fully bright
                     letterWrappers[i].classList.remove('letter-dimmed');
                 } else if (validIndices.has(i)) {
-                    // Valid words stay fully bright
                     letterWrappers[i].classList.remove('letter-dimmed');
                 } else {
-                    // Invalid, duplicate, or restricted segments are gently dimmed
                     letterWrappers[i].classList.add('letter-dimmed');
                 }
             }
         }
 
         async function saveCombo() {
-            // --- STRICT FRONT-END ENFORCEMENT ---
             if (usedWordsThisSession.length >= MAX_COMBOS) {
                 isGameLocked = true;
                 document.getElementById('submit-btn').disabled = true;
@@ -1003,7 +999,6 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
             if (!canSubmit || isGameLocked) return;
             if (editsMade === 0 && hiddenLetterIndex === -1) return;
             
-            // Disable button immediately
             canSubmit = false;
             document.getElementById('submit-btn').disabled = true;
             
@@ -1020,7 +1015,7 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
             let carvesPerLetter = [];
             for (let i = 0; i < currentState.length; i++) {
                 if (i === hiddenLetterIndex) {
-                    carvesPerLetter.push('🔴'); // Still add the voided dot
+                    carvesPerLetter.push('🔴'); 
                     continue;
                 }
                 let diff = 0;
@@ -1028,20 +1023,19 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
                     if (currentState[i][j] !== startingState[i][j]) diff++;
                 }
                 
-                // ONLY add the emoji if actual splices were made (greater than 0)
                 if (diff > 0) {
                     carvesPerLetter.push(getEmojiNum(diff));
                 }
             }
             carvesRecord.push(carvesPerLetter.join(''));
 
-            // DOM Element container for the newly banked item
             let comboDomId = 'combo-' + Date.now();
             let html = `<div class="gallery-item" id="${comboDomId}">
                 <div class="gallery-svgs">${currentState.map((state, idx) => getSVGHTML(state, idx, false)).join('')}</div>
                 <div class="gallery-info">
                     <h3 class="combo-title">${comboStr}</h3>
                     <p class="combo-score-p">+${finalScore} PTS (Cost: ${editsMade})</p>
+                    <p class="rank-feedback-p" style="color: var(--bank-ready); font-size: 0.75rem; margin-top: 6px; font-weight:bold;"></p>
                 </div>
             </div>`;
             document.getElementById('gallery-container').insertAdjacentHTML('afterbegin', html);
@@ -1051,9 +1045,7 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
                 score: finalScore 
             }));
 
-            // Track state before async response
             usedWordsThisSession.push(comboStr);
-
             currentState = startingState.map(arr => [...arr]);
             hiddenLetterIndex = -1;
             recalculateEdits();
@@ -1070,8 +1062,24 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
                 baseWord: dailyWord,
                 wordsPlayed: updatedWordsPlayedList
             };
+            
+            // Calculate and display local rankings immediately
+            let historyRef = gameHistory[daysPassed];
+            let allWordsPlayedToday = historyRef.wordsPlayed || [];
+            let sortedWords = [...allWordsPlayedToday].sort((a, b) => b.score - a.score);
+            
+            let rankDomElem = document.getElementById(comboDomId).querySelector('.rank-feedback-p');
+            
+            let localRankMessages = rawComboWords.map(w => {
+                let localRank = sortedWords.findIndex(x => x.word === w && x.score === finalScore) + 1;
+                let suffix = "th";
+                if (localRank % 10 === 1 && localRank % 100 !== 11) suffix = "st";
+                else if (localRank % 10 === 2 && localRank % 100 !== 12) suffix = "nd";
+                else if (localRank % 10 === 3 && localRank % 100 !== 13) suffix = "rd";
+                return `Your ${localRank}${suffix} highest scoring word today!`;
+            }).join('<br>');
+            rankDomElem.innerHTML = localRankMessages;
 
-            // Send telemetry & calculate trophies
             try {
                 const response = await fetch('https://fluorescent-api.lachlan-mcfarlane.workers.dev/api/log', {
                     method: 'POST',
@@ -1091,12 +1099,26 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
 
                 const resData = await response.json();
 
+                // If global word rankings get added server side in the future:
+                if (resData && resData.wordRanks) {
+                    let globalRankMessages = rawComboWords.map(w => {
+                        let gRank = resData.wordRanks[w];
+                        if (!gRank) return '';
+                        let suffix = "th";
+                        if (gRank % 10 === 1 && gRank % 100 !== 11) suffix = "st";
+                        else if (gRank % 10 === 2 && gRank % 100 !== 12) suffix = "nd";
+                        else if (gRank % 10 === 3 && gRank % 100 !== 13) suffix = "rd";
+                        return `Global Rank: ${gRank}${suffix} highest today!`;
+                    }).filter(m => m !== '').join('<br>');
+                    
+                    if (globalRankMessages) rankDomElem.innerHTML += `<br><span style="color:#a1a1aa">${globalRankMessages}</span>`;
+                }
+
                 if (resData && resData.trophies) {
                     let trophies = resData.trophies;
                     let newSet = new Set((trophies.newWords || []).map(w => w.toUpperCase()));
                     let highSet = new Set((trophies.highestScoreWords || []).map(w => w.toUpperCase()));
 
-                    // Decorate words with trophies
                     let decoratedWords = rawComboWords.map(w => {
                         let tag = '';
                         if (newSet.has(w.toUpperCase())) tag += '🌟';
@@ -1105,11 +1127,8 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
                     });
 
                     let decoratedComboStr = decoratedWords.join(' + ');
-
-                    // Update local arrays
                     usedWordsThisSession[usedWordsThisSession.length - 1] = decoratedComboStr;
 
-                    // Update DOM gallery item
                     let domElem = document.getElementById(comboDomId);
                     if (domElem) {
                         let titleElem = domElem.querySelector('.combo-title');
@@ -1131,7 +1150,6 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
                 console.log("Telemetry transmission failed", e);
             }
 
-            // Save state to localStorage
             localStorage.setItem('carver_daily_score', globalScore);
             localStorage.setItem('carver_used_combos', JSON.stringify(usedWordsThisSession));
             localStorage.setItem('carver_used_individual_words', JSON.stringify([...usedIndividualWords]));
@@ -1154,37 +1172,29 @@ let dailyWord = DAILY_WORDS[daysPassed % DAILY_WORDS.length];
             updateHistoryUI();
         }
 function generateShareText() {
-    // Check if they achieved a top sector score for the day
     const history = JSON.parse(localStorage.getItem('carver_history')) || {};
     const isTopSectorScore = history[daysPassed]?.isHighest5of5 || false;
 
-    // Header
     let text = `FLUORESCENT Sector #${daysPassed} \n`;
     text += `Total Score: ${globalScore}${isTopSectorScore ? ' 🏆' : ''}\n`;
     text += `Splices Executed: ${usedWordsThisSession.length}/5 \n\n`;
 
-    // Print the daily base word before the emojis
     if (typeof dailyWord !== 'undefined') {
         text += `${dailyWord.toUpperCase()}\n`;
     }
     
-    // Loop through the session words
     for (let i = 0; i < usedWordsThisSession.length; i++) {
         let wordStr = usedWordsThisSession[i];
         let emojiRow = carvesRecord[i] || "";
         
-        // Extract only the trophies from the stored word string
         let trophies = "";
         if (wordStr.includes('🌟')) trophies += ' 🌟';
         if (wordStr.includes('👑')) trophies += ' 👑';
         
-        // Combine the splice emojis with the trophies
         let finalLine = emojiRow + trophies;
-        
         text += finalLine.trim() + '\n';
     }
 
-    // Footer
     text += `\nPlay at: http://playfluorescent.com`;
     return text.trim();
 }
@@ -1203,7 +1213,7 @@ function copyToClipboard(text) {
 }
         
         function devTimeTravel() {
-            let realDay = getRealDaysPassed(); // FIX: Used correct function name here
+            let realDay = getRealDaysPassed();
             let currentOverride = localStorage.getItem('carver_dev_day') !== null ? parseInt(localStorage.getItem('carver_dev_day')) : realDay;
             
             let targetDay = prompt(`SYS: REAL WORLD SECTOR IS ${realDay}.\nEnter a past sector number (0 to ${realDay}) to travel to:`, currentOverride);
@@ -1233,14 +1243,14 @@ function copyToClipboard(text) {
         }
 
         const TITLE_STATES = [
-            [ 'F', 'L', 'U', 'O', 'R', 'E', 'S', 'C', 'E', 'N', 'T' ], // Base
-            [ 'F', 'L', '.', 'O', 'R', 'E', 'S', 'C', 'E', 'N', 'T' ], // U voided
-            [ 'F', 'L', '.', '@', 'R', 'E', 'S', 'C', 'E', 'N', 'T' ], // O spliced once
-            [ 'F', 'L', '.', 'C', 'R', 'E', 'S', 'C', 'E', 'N', 'T' ], // Completed splice to C
-            [ 'F', 'L', 'U', 'O', 'R', 'E', 'S', 'C', 'E', 'N', 'T' ], // Base
-            [ 'F', 'L', 'U', 'O', 'R', '.', 'S', 'C', 'E', 'N', 'T' ], // E voided
-            [ 'F', 'L', 'U', 'O', 'R', 'E', 'S', 'C', 'E', 'N', 'T' ], // Base
-            [ 'F', 'L', 'U', 'O', 'R', 'E', '.', 'C', 'E', 'N', 'T' ]  // S voided
+            [ 'F', 'L', 'U', 'O', 'R', 'E', 'S', 'C', 'E', 'N', 'T' ],
+            [ 'F', 'L', '.', 'O', 'R', 'E', 'S', 'C', 'E', 'N', 'T' ],
+            [ 'F', 'L', '.', '@', 'R', 'E', 'S', 'C', 'E', 'N', 'T' ],
+            [ 'F', 'L', '.', 'C', 'R', 'E', 'S', 'C', 'E', 'N', 'T' ],
+            [ 'F', 'L', 'U', 'O', 'R', 'E', 'S', 'C', 'E', 'N', 'T' ],
+            [ 'F', 'L', 'U', 'O', 'R', '.', 'S', 'C', 'E', 'N', 'T' ],
+            [ 'F', 'L', 'U', 'O', 'R', 'E', 'S', 'C', 'E', 'N', 'T' ],
+            [ 'F', 'L', 'U', 'O', 'R', 'E', '.', 'C', 'E', 'N', 'T' ] 
         ];
 
         let currentTitleState = 0;
@@ -1252,7 +1262,6 @@ function copyToClipboard(text) {
             let chars = TITLE_STATES[currentTitleState];
             let html = '';
             
-            // NEW: Parse the title text into words to check against the dictionary
             let titleStr = chars.map(c => c === '.' ? ' ' : c).join('');
             let wordsWithIndices = [];
             let match;
@@ -1270,7 +1279,6 @@ function copyToClipboard(text) {
                 let w = wInfo.word.toUpperCase();
                 if (w.includes('?') || w.includes('@')) continue; 
                 
-                // If dictionary is loaded and word is valid, mark its indices
                 if (dictionary.size === 0 || dictionary.has(w)) {
                     for(let i = wInfo.startIndex; i <= wInfo.endIndex; i++) {
                         validIndices.add(i);
@@ -1278,7 +1286,6 @@ function copyToClipboard(text) {
                 }
             }
 
-            // Treat the base "FLUORESCENT" frames as a pristine board
             let isInitialState = (currentTitleState === 0 || currentTitleState === 4 || currentTitleState === 6);
 
             for(let i=0; i<chars.length; i++) {
@@ -1289,14 +1296,10 @@ function copyToClipboard(text) {
                 let charCode = VALID_STATE_MAP[stateArr.join(',')] || '?';
                 let isInvalid = (charCode === '?' && !isHidden && targetChar !== ' ');
                 
-                // NEW: Decide whether to dim this specific title letter
                 let dimClass = '';
                 if (isInitialState || isHidden) {
-                    // Pristine state and void spaces stay at full brightness
                 } else if (validIndices.has(i) && !isInvalid) {
-                    // Valid words stay at full brightness
                 } else {
-                    // Invalid/junk chunks (like FLUORE) dim into the background!
                     dimClass = ' letter-dimmed';
                 }
                 
@@ -1307,7 +1310,7 @@ function copyToClipboard(text) {
                     svg += `<line x1="${SEGMENT_LINES[j].x1}" y1="${SEGMENT_LINES[j].y1}" x2="${SEGMENT_LINES[j].x2}" y2="${SEGMENT_LINES[j].y2}" class="${classStr}"></line>`;
                 }
                 let dotClass = isHidden ? 'dot-voided' : 'dot-active';
-                svg += `<circle cx="90" cy="132" r="7" class="${dotClass}"></circle>`;
+                svg += `<circle cx="90" cy="145" r="10" class="${dotClass}"></circle>`;
                 svg += `</svg>`;
                 
                 html += `<div class="letter-wrapper${dimClass}" style="margin: 0 1px;">${svg}</div>`;
@@ -1365,7 +1368,7 @@ function copyToClipboard(text) {
                 let classStr = isOn ? 'seg-on' : 'seg-off';
                 svg += `<line id="demo-seg-${idx}-${i}" x1="${SEG_LINES[i].x1}" y1="${SEG_LINES[i].y1}" x2="${SEG_LINES[i].x2}" y2="${SEG_LINES[i].y2}" class="${classStr}"></line>`;
             }
-            svg += `<circle id="demo-dot-${idx}" cx="90" cy="132" r="7" class="dot-active"></circle>`;
+            svg += `<circle id="demo-dot-${idx}" cx="90" cy="145" r="10" class="dot-active"></circle>`;
             svg += `</svg>`;
             html += `<div class="demo-cell" id="demo-cell-${idx}">${svg}</div>`;
         });
@@ -1378,7 +1381,6 @@ function copyToClipboard(text) {
             for(let i=start; i<=end; i++) {
                 const cell = document.getElementById(`demo-cell-${i}`);
                 if(cell) {
-                    // Target the inner lines so it applies the exact same dimming class/opacity pattern as the game board
                     cell.querySelectorAll('line').forEach(l => {
                         l.style.opacity = op;
                     });
@@ -1403,21 +1405,17 @@ function copyToClipboard(text) {
         }
 
         window.updateSlideView = function() {
-            // CLEANUP: Always clear the continuous animation interval when moving slides
             if (window.spliceAnimInterval) clearInterval(window.spliceAnimInterval);
             if (window.voidAnimInterval) clearInterval(window.voidAnimInterval);
 
-            // Update dots
             document.querySelectorAll('.swipe-dot').forEach((d, i) => {
                 d.className = i === currentSlideStep ? 'swipe-dot active' : 'swipe-dot';
             });
             
-            // Update annotations
             document.querySelectorAll('.anno-text').forEach(el => el.classList.remove('active'));
             const currentAnno = document.getElementById(`anno-${currentSlideStep}`);
             if(currentAnno) currentAnno.classList.add('active');
 
-            // Reset board visuals
             document.querySelectorAll('.demo-cell').forEach(c => {
                 c.style.opacity = '1';
                 c.querySelectorAll('line').forEach(l => {
@@ -1425,22 +1423,17 @@ function copyToClipboard(text) {
                 });
             });
 
-            // Reset the 'O' character (demo-cell-3) thoroughly to Valid 'O'
             for (let i = 0; i < 14; i++) {
                 let line = document.getElementById(`demo-seg-3-${i}`);
                 if (line) {
                     line.setAttribute('class', [0, 1, 2, 3, 4, 5].includes(i) ? 'seg-on' : 'seg-off');
                 }
             }
-            // Reset all voids
             for (let i = 0; i < 11; i++) setVoid(i, false);
 
-            // Apply step logic
             if (currentSlideStep === 0) {
-                // Base state: fully bright
             } 
             else if (currentSlideStep === 1) {
-                // Slide 2: Moving void cycle matching user request (FL bright, ORESCENT dim; FLUOR bright, ESCENT dim; etc.)
                 let voidStep = 0;
                 
                 function tickVoidAnimation() {
@@ -1451,17 +1444,14 @@ function copyToClipboard(text) {
                     }
 
                     if (voidStep === 0) {
-                        // Void U (index 2) -> FL bright, ORESCENT dim
                         setVoid(2, true);
                         setWordOpacity(0, 1, '0.7');
                         setWordOpacity(3, 10, '0.7');
                     } else if (voidStep === 1) {
-                        // Void R (index 4) -> FLUO dim, ESCENT dim
                         setVoid(4, true);
                         setWordOpacity(0, 3, '0.7');
                         setWordOpacity(5, 10, '0.7');
                     } else if (voidStep === 2) {
-                        // Void S (index 6) -> FLUORE bright, CENT bright
                         setVoid(6, true);
                         setWordOpacity(0, 5, '0.7');
                         setWordOpacity(7, 10, '1');
@@ -1473,33 +1463,32 @@ function copyToClipboard(text) {
                 window.voidAnimInterval = setInterval(tickVoidAnimation, 1400);
             } 
             else if (currentSlideStep === 2) {
-                setVoid(2, true); // Void U
+                setVoid(2, true); 
                 
-                // Continuous Splice Animation: ORESCENT (dim/invalid start) -> Red Splice -> CRESCENT (bright/valid)
                 let animState = 0;
                 const baseSegs = [0, 3, 4, 5].map(i => document.getElementById(`demo-seg-3-${i}`));
                 const seg1 = document.getElementById('demo-seg-3-1');
                 const seg2 = document.getElementById('demo-seg-3-2');
 
                 function tickSpliceAnimation() {
-                    if (animState === 0) { // ORESCENT (O is dim because it's part of the invalid split chunk)
+                    if (animState === 0) { 
                         if(seg1) seg1.setAttribute('class', 'seg-on');
                         if(seg2) seg2.setAttribute('class', 'seg-on');
                         baseSegs.forEach(s => s && s.setAttribute('class', 'seg-on'));
-                        setWordOpacity(0, 1, '0.7'); // FL bright
-                        setWordOpacity(3, 10, '0.7'); // ORESCENT dim (invalid chunk)
-                    } else if (animState === 1) { // Invalid Red Splice
+                        setWordOpacity(0, 1, '0.7'); 
+                        setWordOpacity(3, 10, '0.7'); 
+                    } else if (animState === 1) { 
                         if(seg1) seg1.setAttribute('class', 'seg-off');
                         if(seg2) seg2.setAttribute('class', 'seg-invalid');
                         baseSegs.forEach(s => s && s.setAttribute('class', 'seg-invalid'));
                         setWordOpacity(0, 1, '0.7');
                         setWordOpacity(3, 10, '0.7');
-                    } else if (animState === 2) { // CRESCENT (Valid C, chunk becomes fully bright!)
+                    } else if (animState === 2) { 
                         if(seg1) seg1.setAttribute('class', 'seg-off');
                         if(seg2) seg2.setAttribute('class', 'seg-off');
                         baseSegs.forEach(s => s && s.setAttribute('class', 'seg-on'));
-                        setWordOpacity(0, 1, '0.7'); // FL dim
-                        setWordOpacity(3, 10, '1');  // CRESCENT bright!
+                        setWordOpacity(0, 1, '0.7'); 
+                        setWordOpacity(3, 10, '1');  
                     }
                     animState = (animState + 1) % 3;
                 }
@@ -1508,7 +1497,6 @@ function copyToClipboard(text) {
                 window.spliceAnimInterval = setInterval(tickSpliceAnimation, 1200); 
             }
 
-            // Update buttons
             document.getElementById('prev-btn').style.display = currentSlideStep === 0 ? 'none' : 'inline-block';
             if (currentSlideStep === totalSteps - 1) {
                 document.getElementById('next-btn').style.display = 'none';
@@ -1534,13 +1522,12 @@ function copyToClipboard(text) {
         };
         
         window.closeModal = function() {
-            if (window.spliceAnimInterval) clearInterval(window.spliceAnimInterval); // Cleanup on close
+            if (window.spliceAnimInterval) clearInterval(window.spliceAnimInterval); 
             if (window.voidAnimInterval) clearInterval(window.voidAnimInterval);
             document.getElementById('welcome-modal').style.display = 'none';
             localStorage.setItem('fluorescent_welcomed', 'true');
         };
 
-        // Swipe logic
         let touchStartX = 0;
         let touchEndX = 0;
         const welcomeBox = document.getElementById('welcome-box');
@@ -1556,8 +1543,8 @@ function copyToClipboard(text) {
 
         function handleSwipe() {
             const threshold = 40;
-            if (touchEndX < touchStartX - threshold) nextSlide(); // Swipe left
-            if (touchEndX > touchStartX + threshold) prevSlide(); // Swipe right
+            if (touchEndX < touchStartX - threshold) nextSlide(); 
+            if (touchEndX > touchStartX + threshold) prevSlide(); 
         }
 
         updateSlideView();
